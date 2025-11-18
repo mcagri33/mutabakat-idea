@@ -14,6 +14,12 @@ return [
     |
     */
 
+    'reconciliation_api' => [
+    'base_url' => env('MAIN_API_URL'),
+    'key'      => env('MAIN_API_KEY'),
+        ],
+
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
