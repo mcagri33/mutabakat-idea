@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\ReconciliationBank;
 use App\Models\ReconciliationIncomingEmail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Webklex\IMAP\Facades\Client;
 
 class ReconciliationIncomingMailService
@@ -188,11 +190,14 @@ class ReconciliationIncomingMailService
             
             foreach ($admins as $admin) {
                 try {
-                    // Laravel'in bildirim sistemini kullan - direkt veritabanına kaydet
-                    $admin->notify(new \Filament\Notifications\DatabaseNotification([
-                        'id' => \Illuminate\Support\Str::uuid(),
-                        'type' => \Filament\Notifications\DatabaseNotification::class,
-                        'data' => [
+                    // Direkt veritabanına kaydet - Filament formatında
+                    // Console komutlarında Filament'in bildirim sistemi düzgün çalışmayabilir
+                    DB::table('notifications')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'type' => 'filament',
+                        'notifiable_type' => \App\Models\User::class,
+                        'notifiable_id' => $admin->id,
+                        'data' => json_encode([
                             'title' => 'Banka Cevabı Geldi',
                             'body' => "{$customer->name} firması için {$bank->bank_name} bankasından {$request->year} yılı mutabakat cevabı geldi{$attachmentText}.",
                             'icon' => 'heroicon-o-envelope-open',
@@ -205,56 +210,24 @@ class ReconciliationIncomingMailService
                                     'button' => true,
                                 ]
                             ] : [],
-                        ],
+                        ]),
                         'read_at' => null,
-                    ]));
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                     
-                    Log::info('Bildirim gönderildi (Laravel)', [
+                    Log::info('Bildirim veritabanına kaydedildi', [
                         'user_id' => $admin->id,
                         'user_email' => $admin->email,
                         'bank_id' => $bank->id,
                         'request_id' => $request->id,
                     ]);
                 } catch (\Exception $e) {
-                    // Alternatif: Direkt veritabanına kaydet
-                    try {
-                        \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                            'id' => \Illuminate\Support\Str::uuid()->toString(),
-                            'type' => 'filament',
-                            'notifiable_type' => \App\Models\User::class,
-                            'notifiable_id' => $admin->id,
-                            'data' => json_encode([
-                                'title' => 'Banka Cevabı Geldi',
-                                'body' => "{$customer->name} firması için {$bank->bank_name} bankasından {$request->year} yılı mutabakat cevabı geldi{$attachmentText}.",
-                                'icon' => 'heroicon-o-envelope-open',
-                                'iconColor' => 'success',
-                                'actions' => $requestUrl ? [
-                                    [
-                                        'name' => 'view',
-                                        'label' => 'Görüntüle',
-                                        'url' => $requestUrl,
-                                        'button' => true,
-                                    ]
-                                ] : [],
-                            ]),
-                            'read_at' => null,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                        
-                        Log::info('Bildirim gönderildi (Direkt DB)', [
-                            'user_id' => $admin->id,
-                            'user_email' => $admin->email,
-                            'bank_id' => $bank->id,
-                            'request_id' => $request->id,
-                        ]);
-                    } catch (\Exception $dbError) {
-                        Log::error('Bildirim gönderme hatası (Direkt DB)', [
-                            'user_id' => $admin->id,
-                            'error' => $dbError->getMessage(),
-                            'trace' => $dbError->getTraceAsString(),
-                        ]);
-                    }
+                    Log::error('Bildirim kaydetme hatası', [
+                        'user_id' => $admin->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
             }
             
