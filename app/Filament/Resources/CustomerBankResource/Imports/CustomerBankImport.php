@@ -17,13 +17,11 @@ class CustomerBankImport extends Importer
         return [
             ImportColumn::make('customer')
                 ->label('Firma Adı')
-                ->required()
                 ->rules(['required', 'string'])
                 ->example('Kanada Vizeniz'),
             
             ImportColumn::make('bank_name')
                 ->label('Banka Adı')
-                ->required()
                 ->rules(['required', 'string', 'max:255'])
                 ->example('Ziraat Bankası'),
             
@@ -39,7 +37,6 @@ class CustomerBankImport extends Importer
             
             ImportColumn::make('officer_email')
                 ->label('E-posta')
-                ->required()
                 ->rules(['required', 'email:rfc,dns', 'max:255'])
                 ->example('ahmet@ziraat.com.tr'),
             
