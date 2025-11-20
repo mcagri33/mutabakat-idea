@@ -21,7 +21,7 @@ Route::get('/sync-customers', function () {
             'Accept'    => 'application/json',
         ])->get($testUrl, [
             'role'     => 'Customer',
-            'per_page' => 10, // Test için küçük sayı
+            'per_page' => 10,
         ]);
         
         $info = [
@@ -37,7 +37,9 @@ Route::get('/sync-customers', function () {
             
             $info['Response Keys'] = array_keys($json);
             $info['Data Count'] = count($data);
+            $info['First Item Keys'] = !empty($data) ? array_keys($data[0] ?? []) : 'No data';
             $info['First Item'] = $data[0] ?? 'No data';
+            $info['First Item ID'] = $data[0]['id'] ?? 'NO ID FIELD';
             
             // Şimdi gerçek sync'i çalıştır
             $result = $service->sync();
@@ -45,6 +47,15 @@ Route::get('/sync-customers', function () {
             
             $info['Sync Result'] = $result ? 'Success' : 'Failed';
             $info['Total Customers in DB'] = $count;
+            
+            // Son log kayıtlarını göster
+            $logs = \Illuminate\Support\Facades\DB::table('logs')
+                ->where('message', 'like', '%Customer Sync%')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+            
+            $info['Recent Logs'] = $logs->pluck('message')->toArray();
             
             return "<pre>" . print_r($info, true) . "</pre>";
         } else {
