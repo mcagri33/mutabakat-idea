@@ -7,24 +7,26 @@ Route::get('/sync-customers', function () {
         $baseUrl = config('services.reconciliation_api.base_url');
         $apiKey = config('services.reconciliation_api.key');
         
-        // API ayarlarını kontrol et
         if (!$baseUrl || !$apiKey) {
             return "API configuration missing!<br>MAIN_API_URL: " . ($baseUrl ?: 'NOT SET') . "<br>MAIN_API_KEY: " . ($apiKey ? 'SET' : 'NOT SET');
         }
         
         $service = app(\App\Services\CustomerSyncService::class);
         
-        // API çağrısını test et
+        // Test URL'i göster
+        $testUrl = $baseUrl . '/users';
+        
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'X-API-Key' => $apiKey,
             'Accept'    => 'application/json',
-        ])->get($baseUrl . '/users', [
+        ])->get($testUrl, [
             'role'     => 'Customer',
-            'per_page' => 2000,
+            'per_page' => 10, // Test için küçük sayı
         ]);
         
         $info = [
-            'API URL' => $baseUrl . '/users',
+            'Base URL' => $baseUrl,
+            'Full URL' => $testUrl,
             'Status' => $response->status(),
             'Has Key' => !empty($apiKey),
         ];
@@ -35,8 +37,9 @@ Route::get('/sync-customers', function () {
             
             $info['Response Keys'] = array_keys($json);
             $info['Data Count'] = count($data);
-            $info['First Item Keys'] = !empty($data) ? array_keys($data[0] ?? []) : 'No data';
+            $info['First Item'] = $data[0] ?? 'No data';
             
+            // Şimdi gerçek sync'i çalıştır
             $result = $service->sync();
             $count = \App\Models\Customer::count();
             
@@ -46,6 +49,7 @@ Route::get('/sync-customers', function () {
             return "<pre>" . print_r($info, true) . "</pre>";
         } else {
             $info['Error'] = $response->body();
+            $info['Error Status'] = $response->status();
             return "<pre>" . print_r($info, true) . "</pre>";
         }
     } catch (\Exception $e) {
