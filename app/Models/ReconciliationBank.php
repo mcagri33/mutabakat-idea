@@ -37,9 +37,9 @@ class ReconciliationBank extends Model
     }
 
     public function customer()
-{
-    return $this->belongsTo(\App\Models\Customer::class, 'customer_id');
-}
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
+    }
 
     /** Firma banka tanımı (kaynak kayıt) */
     public function sourceBank()
@@ -57,5 +57,11 @@ class ReconciliationBank extends Model
     public function emails()
     {
         return $this->hasMany(ReconciliationEmail::class, 'bank_id');
+    }
+    
+    /** Gelen mail'ler */
+    public function incomingEmails()
+    {
+        return $this->hasMany(ReconciliationIncomingEmail::class, 'bank_id');
     }
 }

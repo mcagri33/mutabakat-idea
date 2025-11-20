@@ -7,11 +7,6 @@
 
 <body style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
 
-    <!-- LOGO -->
-    <div style="text-align: left; margin-bottom: 20px;">
-        <img src="{{ asset('img/idea-logo.png') }}" alt="Idea Logo" style="height: 80px;">
-    </div>
-
     <!-- Tarih sağda -->
     <div style="width: 100%; text-align: right; margin-bottom: 20px;">
         Tarih: {{ now()->format('d.m.Y') }}
@@ -20,16 +15,9 @@
     <!-- Hitap -->
     <p>SAYIN; {{ $bank->officer_name ?? '.....' }}</p>
 
-    <br>
-
-    <!-- Başlık -->
-    <h3 style="text-align: center; font-weight: bold; margin-bottom: 25px;">
-        MUTABAKAT MEKTUBU
-    </h3>
-
     <!-- Ana paragraf -->
     <p style="line-height: 1.6;">
-        Bankanız nezdindeki <strong>{{ $customer->name }}</strong> A.Ş.’nin hesaplara ilişkin
+        Bankanız nezdindeki <strong>{{ $customer->name }}</strong> şirketinin hesaplara ilişkin
         (aşağıda listelenen detayda, kaşe ve imzalı olarak)
         <strong>{{ $request->year }} YILI 31.12.{{ $request->year }}</strong> tarihi itibari kayıtlarımızda görünen
         bilgilerin ve hesap bakiyelerinin 7 (yedi) gün içerisinde tarafımıza iletilmesini rica ederiz.

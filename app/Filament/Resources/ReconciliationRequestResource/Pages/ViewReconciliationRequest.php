@@ -14,23 +14,12 @@ class ViewReconciliationRequest extends ViewRecord
     {
         return [
             Actions\EditAction::make(),
+            Actions\DeleteAction::make(),
         ];
     }
 
     protected function getHeaderWidgets(): array
     {
-        return [
-            \App\Filament\Resources\ReconciliationRequestResource\Widgets\RequestSummaryWidget::class,
-            \App\Filament\Resources\ReconciliationRequestResource\Widgets\RequestProgressWidget::class,
-            \App\Filament\Resources\ReconciliationRequestResource\Widgets\RequestTimelineWidget::class,
-        ];
-    }
-
-    public function getHeaderWidgetsColumns(): int | array
-    {
-        return [
-            'md' => 2,
-            'xl' => 3,
-        ];
+        return []; // İstatistik widget'ları kaldırıldı
     }
 }

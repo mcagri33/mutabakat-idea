@@ -11,7 +11,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ReconciliationEmailResource extends Resource
 {
@@ -47,12 +46,19 @@ protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
                 ->limit(40)
                 ->searchable(),
 
-            Tables\Columns\BadgeColumn::make('status')
+            Tables\Columns\TextColumn::make('status')
                 ->label('Durum')
-                ->colors([
-                    'success' => 'sent',
-                    'danger'  => 'failed',
-                ]),
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'sent' => 'success',
+                    'failed' => 'danger',
+                    default => 'gray',
+                })
+                ->formatStateUsing(fn (string $state): string => match ($state) {
+                    'sent' => 'Gönderildi',
+                    'failed' => 'Başarısız',
+                    default => $state,
+                }),
 
             Tables\Columns\TextColumn::make('sent_at')
                 ->label('Gönderim Tarihi')
@@ -61,7 +67,30 @@ protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
             ->defaultSort('id', 'desc')
 
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Durum')
+                    ->options([
+                        'sent' => 'Gönderildi',
+                        'failed' => 'Başarısız',
+                    ]),
+                Tables\Filters\Filter::make('sent_at')
+                    ->form([
+                        Forms\Components\DatePicker::make('sent_from')
+                            ->label('Başlangıç Tarihi'),
+                        Forms\Components\DatePicker::make('sent_until')
+                            ->label('Bitiş Tarihi'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['sent_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('sent_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['sent_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('sent_at', '<=', $date),
+                            );
+                    }),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

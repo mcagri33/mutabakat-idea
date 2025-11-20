@@ -13,6 +13,8 @@ class PendingRequestsTableWidget extends BaseWidget
 
     protected static ?int $sort = 4;
 
+    protected static ?int $pollingInterval = null;
+
     public function table(Table $table): Table
     {
         return $table
@@ -75,7 +77,8 @@ class PendingRequestsTableWidget extends BaseWidget
                     }),
             ])
             ->defaultSort('year', 'desc')
-            ->paginated([10, 25, 50]);
+            ->paginated([10, 25, 50])
+            ->poll(null);
     }
 }
 

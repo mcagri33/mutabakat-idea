@@ -30,13 +30,21 @@ class EmailsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('subject')
                     ->label('Konu'),
 
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Durum')
-                    ->colors([
-                        'success' => 'sent',
-                        'danger' => 'failed',
-                        'warning' => 'bounced',
-                    ]),
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'sent' => 'success',
+                        'failed' => 'danger',
+                        'bounced' => 'warning',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'sent' => 'Gönderildi',
+                        'failed' => 'Başarısız',
+                        'bounced' => 'Geri Döndü',
+                        default => $state,
+                    }),
 
                 Tables\Columns\TextColumn::make('sent_at')
                     ->label('Gönderim Tarihi')

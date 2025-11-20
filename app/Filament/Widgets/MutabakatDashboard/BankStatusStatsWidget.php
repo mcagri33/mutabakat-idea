@@ -8,6 +8,14 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class BankStatusStatsWidget extends BaseWidget
 {
+    protected static bool $isLazy = true;
+    
+    // Bu widget gizli - MutabakatStatsOverviewWidget içinde zaten var
+    public static function canView(): bool
+    {
+        return false;
+    }
+
     protected function getStats(): array
     {
         $currentYear = now()->year;

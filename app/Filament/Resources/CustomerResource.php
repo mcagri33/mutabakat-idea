@@ -11,7 +11,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class CustomerResource extends Resource
 {
@@ -22,6 +21,11 @@ protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $pluralLabel = 'Firmalar';
     protected static ?string $modelLabel = 'Firma';
     protected static ?string $navigationGroup = 'Tanımlar';
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery();
+    }
 
     public static function form(Form $form): Form
     {

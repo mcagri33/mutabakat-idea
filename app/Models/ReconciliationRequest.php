@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReconciliationRequest extends Model
 {
-     protected $fillable = [
+    protected $fillable = [
         'customer_id',
         'type',
         'year',
@@ -36,7 +36,7 @@ class ReconciliationRequest extends Model
         return $this->hasMany(ReconciliationBank::class, 'request_id');
     }
 
-     public function documents()
+    public function documents()
     {
         return $this->hasManyThrough(
             ReconciliationDocument::class,
@@ -52,5 +52,11 @@ class ReconciliationRequest extends Model
     public function emails()
     {
         return $this->hasMany(ReconciliationEmail::class, 'request_id');
+    }
+    
+    /** Gelen mail'ler */
+    public function incomingEmails()
+    {
+        return $this->hasMany(ReconciliationIncomingEmail::class, 'request_id');
     }
 }

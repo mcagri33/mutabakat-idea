@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReconciliationEmail extends Model
 {
-     protected $fillable = [
+    protected $fillable = [
         'request_id',
         'bank_id',
         'sent_to',

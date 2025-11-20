@@ -61,21 +61,37 @@ class BanksRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('officer_email')->label('Yetkili E-posta'),
                 Tables\Columns\TextColumn::make('officer_phone')->label('Telefon'),
 
-                Tables\Columns\BadgeColumn::make('mail_status')
-                ->label('Mail Durumu')
-                ->colors([
-                    'secondary' => 'pending',
-                    'primary' => 'sent',
-                    'danger' => 'failed',
-                ]),
+                Tables\Columns\TextColumn::make('mail_status')
+                    ->label('Mail Durumu')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'secondary',
+                        'sent' => 'primary',
+                        'failed' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'pending' => 'Beklemede',
+                        'sent' => 'Gönderildi',
+                        'failed' => 'Hata',
+                        default => $state,
+                    }),
 
-            Tables\Columns\BadgeColumn::make('reply_status')
-                ->label('Cevap Durumu')
-                ->colors([
-                    'secondary' => 'pending',
-                    'info' => 'received',
-                    'success' => 'completed',
-                ]),
+                Tables\Columns\TextColumn::make('reply_status')
+                    ->label('Cevap Durumu')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'secondary',
+                        'received' => 'info',
+                        'completed' => 'success',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'pending' => 'Beklemede',
+                        'received' => 'Geldi',
+                        'completed' => 'Tamamlandı',
+                        default => $state,
+                    }),
             ])
             ->headerActions([]) // Create yok
             ->actions([
@@ -86,23 +102,40 @@ class BanksRelationManager extends RelationManager
         ->icon('heroicon-o-paper-airplane')
         ->color('primary')
         ->requiresConfirmation()
+        ->modalHeading('Mail Gönder')
+        ->modalDescription('Bu bankaya mutabakat maili gönderilecek. Devam etmek istiyor musunuz?')
+        ->modalSubmitActionLabel('Gönder')
+        ->modalCancelActionLabel('İptal')
         ->action(function ($record) {
+            try {
+                // Mail gönderme servisi
+                app(\App\Services\ReconciliationMailService::class)
+                    ->sendBankMail($record);
 
-            // Mail gönderme servisi
-            app(\App\Services\ReconciliationMailService::class)
-                ->sendBankMail($record);
+                // Mail durumu güncelle
+                $record->update([
+                    'mail_status'  => 'sent',
+                    'mail_sent_at' => now(),
+                ]);
 
-            // Mail durumu güncelle
-            $record->update([
-                'mail_status'  => 'sent',
-                'mail_sent_at' => now(),
-            ]);
+                \Filament\Notifications\Notification::make()
+                    ->title('Mail başarıyla gönderildi')
+                    ->body('Mutabakat maili ' . $record->officer_email . ' adresine gönderildi.')
+                    ->success()
+                    ->send();
+            } catch (\Exception $e) {
+                // Hata durumunda güncelle
+                $record->update([
+                    'mail_status' => 'failed',
+                ]);
 
-            \Filament\Notifications\Notification::make()
-                ->title('Mail başarıyla gönderildi')
-                ->success()
-                ->send();
-                 }),
+                \Filament\Notifications\Notification::make()
+                    ->title('Mail gönderilemedi')
+                    ->body('Hata: ' . $e->getMessage())
+                    ->danger()
+                    ->send();
+            }
+        }),
             ])
 
             ->bulkActions([]);

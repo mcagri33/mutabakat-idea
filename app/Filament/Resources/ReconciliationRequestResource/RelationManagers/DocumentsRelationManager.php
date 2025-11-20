@@ -68,14 +68,16 @@ class DocumentsRelationManager extends RelationManager
                     ->iconColor('primary')
                     ->limit(30),
 
-                Tables\Columns\BadgeColumn::make('file_type')
+                Tables\Columns\TextColumn::make('file_type')
                     ->label('Dosya Tipi')
+                    ->badge()
                     ->formatStateUsing(fn (string $state): string => strtoupper($state))
-                    ->colors([
-                        'success' => 'pdf',
-                        'warning' => ['doc', 'docx'],
-                        'info' => ['png', 'jpg', 'jpeg'],
-                    ]),
+                    ->color(fn (string $state): string => match (strtolower($state)) {
+                        'pdf' => 'success',
+                        'doc', 'docx' => 'warning',
+                        'png', 'jpg', 'jpeg' => 'info',
+                        default => 'gray',
+                    }),
 
                 Tables\Columns\TextColumn::make('bank.bank_name')
                     ->label('Banka')
@@ -87,6 +89,42 @@ class DocumentsRelationManager extends RelationManager
                     ->label('Yükleyen')
                     ->sortable()
                     ->default('Sistem'),
+
+                Tables\Columns\TextColumn::make('file_size')
+                    ->label('Boyut')
+                    ->getStateUsing(function ($record) {
+                        if (!Storage::exists($record->file_path)) {
+                            return '-';
+                        }
+                        $size = Storage::size($record->file_path);
+                        if ($size < 1024) {
+                            return $size . ' B';
+                        } elseif ($size < 1048576) {
+                            return number_format($size / 1024, 2) . ' KB';
+                        } else {
+                            return number_format($size / 1048576, 2) . ' MB';
+                        }
+                    })
+                    ->sortable()
+                    ->alignCenter(),
+
+                Tables\Columns\IconColumn::make('bank.reply_status')
+                    ->label('Banka Durumu')
+                    ->icon(fn (string $state): string => match ($state) {
+                        'completed' => 'heroicon-o-check-circle',
+                        'received' => 'heroicon-o-inbox',
+                        default => 'heroicon-o-clock',
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'completed' => 'success',
+                        'received' => 'info',
+                        default => 'warning',
+                    })
+                    ->tooltip(fn ($record) => match ($record->bank->reply_status ?? 'pending') {
+                        'completed' => 'Tamamlandı',
+                        'received' => 'Belge Alındı',
+                        default => 'Beklemede',
+                    }),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Yükleme Tarihi')
@@ -124,16 +162,30 @@ class DocumentsRelationManager extends RelationManager
                     ->label('İndir')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(function ($record) {
-                        $path = storage_path('app/' . $record->file_path);
-
-                        if (!file_exists($path)) {
-                            abort(404, 'Dosya bulunamadı.');
+                        // Güvenlik: Path traversal koruması
+                        $filePath = $record->file_path;
+                        
+                        // Güvenli yol kontrolü
+                        if (str_contains($filePath, '..') || !str_starts_with($filePath, 'reconciliation_documents/')) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Güvenlik Hatası')
+                                ->body('Geçersiz dosya yolu.')
+                                ->danger()
+                                ->send();
+                            return;
                         }
-
-                        return response()->download(
-                            $path,
-                            $record->file_name
-                        );
+                        
+                        // Storage kullanarak güvenli indirme
+                        if (!Storage::exists($filePath)) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Dosya Bulunamadı')
+                                ->body('Dosya sistemde bulunamadı.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+                        
+                        return Storage::download($filePath, $record->file_name ?? basename($filePath));
                     }),
 
                 Tables\Actions\EditAction::make(),

@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('reconciliation_banks', function (Blueprint $table) {
             $table->id();
 
-            $table->unsignedBigInteger('request_id'); 
-                $table->unsignedBigInteger('customer_id');        // 🔥 direkt burada
-        // bağlandığı mutabakat talebi
+            $table->unsignedBigInteger('request_id');
+            $table->unsignedBigInteger('customer_id'); // direkt burada
+            // bağlandığı mutabakat talebi
             $table->unsignedBigInteger('customer_bank_id')->nullable(); // firmaya tanımlı banka kaynağı
 
             // Dinamik olarak talep içine kopyalanan alanlar
@@ -37,7 +37,7 @@ return new class extends Migration
             $table->enum('reply_status', [
                 'pending',       // bekliyor
                 'received',      // belge geldi
-                'approved',      // admin onayladı
+                'completed',     // tamamlandı (admin onayladı)
             ])->default('pending');
 
             // Tarihler
@@ -53,7 +53,9 @@ return new class extends Migration
                 ->references('id')->on('reconciliation_requests')
                 ->onDelete('cascade');
 
-                    $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
+            $table->foreign('customer_id')
+                ->references('id')->on('customers')
+                ->onDelete('cascade');
 
             $table->foreign('customer_bank_id')
                 ->references('id')->on('customer_banks')
