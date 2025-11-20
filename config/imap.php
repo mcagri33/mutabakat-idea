@@ -11,6 +11,14 @@ return [
             'username' => env('IMAP_USERNAME'),
             'password' => env('IMAP_PASSWORD'),
             'protocol' => env('IMAP_PROTOCOL', 'imap'),
+            // ✅ SSL sertifika doğrulama hatası için
+            'options' => [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true,
+                ],
+            ],
         ],
     ],
 ];
