@@ -46,8 +46,8 @@ return [
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
-            // ✅ Exchange SSL sertifika doğrulama hatası için
-            'stream' => [
+            // ✅ Laravel 11 / Symfony Mailer için SSL ayarları
+            'stream_context' => [
                 'ssl' => [
                     'allow_self_signed' => true,
                     'verify_peer' => false,
