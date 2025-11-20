@@ -71,7 +71,17 @@ class ListCustomerBanks extends ListRecords
                 ->label('Excel İçe Aktar')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->importer(CustomerBankImport::class)
-                ->color('success'),
+                ->color('success')
+                ->form(fn (Actions\ImportAction $action): array => [
+                    $action->getFileUploadComponent()
+                        ->acceptedFileTypes([
+                            'text/csv',
+                            'text/plain',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+                            'application/vnd.ms-excel', // .xls
+                        ])
+                        ->helperText('CSV, TXT veya Excel (.xlsx, .xls) dosyası yükleyebilirsiniz.'),
+                ]),
             Actions\CreateAction::make(),
         ];
     }
