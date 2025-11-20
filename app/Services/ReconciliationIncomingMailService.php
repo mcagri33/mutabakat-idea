@@ -158,7 +158,6 @@ class ReconciliationIncomingMailService
             $customer = $bank->customer;
             
             // Tüm admin kullanıcılarına bildirim gönder
-            // FilamentAccessManagement kullanıyorsak roles relationship'i var
             $admins = \App\Models\User::whereHas('roles', function($query) {
                 $query->where('name', 'admin')
                       ->orWhere('name', 'super-admin');
@@ -169,32 +168,51 @@ class ReconciliationIncomingMailService
                 $admins = \App\Models\User::all();
             }
             
+            if ($admins->isEmpty()) {
+                Log::warning('Bildirim gönderilemedi: Kullanıcı bulunamadı');
+                return;
+            }
+            
             $attachmentCount = count($incomingEmail->attachments ?? []);
             $attachmentText = $attachmentCount > 0 
                 ? " ({$attachmentCount} ek)" 
                 : "";
             
+            $requestUrl = \App\Filament\Resources\ReconciliationRequestResource::getUrl('view', ['record' => $request->id]);
+            
             foreach ($admins as $admin) {
-                // Filament notification - veritabanına kaydet
-                \Filament\Notifications\Notification::make()
-                    ->title('Banka Cevabı Geldi')
-                    ->body(
-                        "{$customer->name} firması için " .
-                        "{$bank->bank_name} bankasından " .
-                        "{$request->year} yılı mutabakat cevabı geldi{$attachmentText}."
-                    )
-                    ->success()
-                    ->icon('heroicon-o-envelope-open')
-                    ->actions([
-                        \Filament\Notifications\Actions\Action::make('view')
-                            ->label('Görüntüle')
-                            ->url(\App\Filament\Resources\ReconciliationRequestResource::getUrl('view', ['record' => $request->id]))
-                            ->button(),
-                    ])
-                    ->sendToDatabase($admin);
+                try {
+                    // Filament notification - veritabanına kaydet
+                    \Filament\Notifications\Notification::make()
+                        ->title('Banka Cevabı Geldi')
+                        ->body(
+                            "{$customer->name} firması için " .
+                            "{$bank->bank_name} bankasından " .
+                            "{$request->year} yılı mutabakat cevabı geldi{$attachmentText}."
+                        )
+                        ->success()
+                        ->icon('heroicon-o-envelope-open')
+                        ->actions([
+                            \Filament\Notifications\Actions\Action::make('view')
+                                ->label('Görüntüle')
+                                ->url($requestUrl)
+                                ->button(),
+                        ])
+                        ->sendToDatabase($admin);
+                    
+                    Log::info('Bildirim gönderildi', [
+                        'user_id' => $admin->id,
+                        'user_email' => $admin->email,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Bildirim gönderme hatası (kullanıcı)', [
+                        'user_id' => $admin->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
             
-            Log::info('Admin bildirimi gönderildi', [
+            Log::info('Admin bildirimi işlemi tamamlandı', [
                 'admin_count' => $admins->count(),
                 'bank_id' => $bank->id,
                 'request_id' => $request->id,
