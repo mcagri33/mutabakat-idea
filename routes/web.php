@@ -11,58 +11,65 @@ Route::get('/sync-customers', function () {
             return "API configuration missing!<br>MAIN_API_URL: " . ($baseUrl ?: 'NOT SET') . "<br>MAIN_API_KEY: " . ($apiKey ? 'SET' : 'NOT SET');
         }
         
-        $service = app(\App\Services\CustomerSyncService::class);
-        
-        // Test URL'i göster
-        $testUrl = $baseUrl . '/users';
-        
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'X-API-Key' => $apiKey,
-            'Accept'    => 'application/json',
-        ])->get($testUrl, [
-            'role'     => 'Customer',
-            'per_page' => 10,
-        ]);
-        
-        $info = [
-            'Base URL' => $baseUrl,
-            'Full URL' => $testUrl,
-            'Status' => $response->status(),
-            'Has Key' => !empty($apiKey),
+        // Farklı URL kombinasyonlarını test et
+        $testUrls = [
+            $baseUrl . '/users',  // https://ideadocs.com.tr/api/reconciliation/users
+            'https://ideadocs.com.tr/api/reconciliation/users',  // Tam URL
+            'https://ideadocs.com.tr/reconciliation/users',  // /api olmadan
         ];
         
-        if ($response->successful()) {
-            $json = $response->json();
-            $data = $json['data'] ?? [];
-            
-            $info['Response Keys'] = array_keys($json);
-            $info['Data Count'] = count($data);
-            $info['First Item Keys'] = !empty($data) ? array_keys($data[0] ?? []) : 'No data';
-            $info['First Item'] = $data[0] ?? 'No data';
-            $info['First Item ID'] = $data[0]['id'] ?? 'NO ID FIELD';
-            
-            // Şimdi gerçek sync'i çalıştır
+        $results = [];
+        foreach ($testUrls as $testUrl) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'X-API-Key' => $apiKey,
+                    'Accept'    => 'application/json',
+                ])->timeout(10)->get($testUrl, [
+                    'role'     => 'Customer',
+                    'per_page' => 5,
+                ]);
+                
+                $results[$testUrl] = [
+                    'status' => $response->status(),
+                    'success' => $response->successful(),
+                    'has_data' => !empty($response->json()['data'] ?? []),
+                    'response' => $response->successful() ? 'OK' : $response->body(),
+                ];
+            } catch (\Exception $e) {
+                $results[$testUrl] = [
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+        
+        // En iyi çalışan URL'i bul
+        $workingUrl = null;
+        foreach ($results as $url => $result) {
+            if (isset($result['success']) && $result['success']) {
+                $workingUrl = $url;
+                break;
+            }
+        }
+        
+        $info = [
+            'Base URL Config' => $baseUrl,
+            'Test Results' => $results,
+            'Working URL' => $workingUrl,
+        ];
+        
+        if ($workingUrl) {
+            // Çalışan URL ile sync yap
+            $service = app(\App\Services\CustomerSyncService::class);
             $result = $service->sync();
             $count = \App\Models\Customer::count();
             
             $info['Sync Result'] = $result ? 'Success' : 'Failed';
             $info['Total Customers in DB'] = $count;
-            
-            // Son log kayıtlarını göster
-            $logs = \Illuminate\Support\Facades\DB::table('logs')
-                ->where('message', 'like', '%Customer Sync%')
-                ->orderBy('created_at', 'desc')
-                ->limit(5)
-                ->get();
-            
-            $info['Recent Logs'] = $logs->pluck('message')->toArray();
-            
-            return "<pre>" . print_r($info, true) . "</pre>";
         } else {
-            $info['Error'] = $response->body();
-            $info['Error Status'] = $response->status();
-            return "<pre>" . print_r($info, true) . "</pre>";
+            $info['Error'] = 'No working URL found. Please check the API route configuration.';
         }
+        
+        return "<pre>" . print_r($info, true) . "</pre>";
     } catch (\Exception $e) {
         return "Error: " . $e->getMessage() . "<br>Trace: " . $e->getTraceAsString();
     }
