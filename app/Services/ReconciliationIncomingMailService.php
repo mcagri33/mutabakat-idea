@@ -188,42 +188,73 @@ class ReconciliationIncomingMailService
             
             foreach ($admins as $admin) {
                 try {
-                    // Filament notification - veritabanına kaydet
-                    $notification = \Filament\Notifications\Notification::make()
-                        ->title('Banka Cevabı Geldi')
-                        ->body(
-                            "{$customer->name} firması için " .
-                            "{$bank->bank_name} bankasından " .
-                            "{$request->year} yılı mutabakat cevabı geldi{$attachmentText}."
-                        )
-                        ->success()
-                        ->icon('heroicon-o-envelope-open');
+                    // Laravel'in bildirim sistemini kullan - direkt veritabanına kaydet
+                    $admin->notify(new \Filament\Notifications\DatabaseNotification([
+                        'id' => \Illuminate\Support\Str::uuid(),
+                        'type' => \Filament\Notifications\DatabaseNotification::class,
+                        'data' => [
+                            'title' => 'Banka Cevabı Geldi',
+                            'body' => "{$customer->name} firması için {$bank->bank_name} bankasından {$request->year} yılı mutabakat cevabı geldi{$attachmentText}.",
+                            'icon' => 'heroicon-o-envelope-open',
+                            'iconColor' => 'success',
+                            'actions' => $requestUrl ? [
+                                [
+                                    'name' => 'view',
+                                    'label' => 'Görüntüle',
+                                    'url' => $requestUrl,
+                                    'button' => true,
+                                ]
+                            ] : [],
+                        ],
+                        'read_at' => null,
+                    ]));
                     
-                    // URL varsa action ekle
-                    if ($requestUrl) {
-                        $notification->actions([
-                            \Filament\Notifications\Actions\Action::make('view')
-                                ->label('Görüntüle')
-                                ->url($requestUrl)
-                                ->button(),
-                        ]);
-                    }
-                    
-                    // Veritabanına kaydet
-                    $notification->sendToDatabase($admin);
-                    
-                    Log::info('Bildirim gönderildi', [
+                    Log::info('Bildirim gönderildi (Laravel)', [
                         'user_id' => $admin->id,
                         'user_email' => $admin->email,
                         'bank_id' => $bank->id,
                         'request_id' => $request->id,
                     ]);
                 } catch (\Exception $e) {
-                    Log::error('Bildirim gönderme hatası (kullanıcı)', [
-                        'user_id' => $admin->id,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
+                    // Alternatif: Direkt veritabanına kaydet
+                    try {
+                        \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                            'id' => \Illuminate\Support\Str::uuid()->toString(),
+                            'type' => 'filament',
+                            'notifiable_type' => \App\Models\User::class,
+                            'notifiable_id' => $admin->id,
+                            'data' => json_encode([
+                                'title' => 'Banka Cevabı Geldi',
+                                'body' => "{$customer->name} firması için {$bank->bank_name} bankasından {$request->year} yılı mutabakat cevabı geldi{$attachmentText}.",
+                                'icon' => 'heroicon-o-envelope-open',
+                                'iconColor' => 'success',
+                                'actions' => $requestUrl ? [
+                                    [
+                                        'name' => 'view',
+                                        'label' => 'Görüntüle',
+                                        'url' => $requestUrl,
+                                        'button' => true,
+                                    ]
+                                ] : [],
+                            ]),
+                            'read_at' => null,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        
+                        Log::info('Bildirim gönderildi (Direkt DB)', [
+                            'user_id' => $admin->id,
+                            'user_email' => $admin->email,
+                            'bank_id' => $bank->id,
+                            'request_id' => $request->id,
+                        ]);
+                    } catch (\Exception $dbError) {
+                        Log::error('Bildirim gönderme hatası (Direkt DB)', [
+                            'user_id' => $admin->id,
+                            'error' => $dbError->getMessage(),
+                            'trace' => $dbError->getTraceAsString(),
+                        ]);
+                    }
                 }
             }
             
