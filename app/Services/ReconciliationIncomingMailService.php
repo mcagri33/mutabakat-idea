@@ -154,9 +154,14 @@ class ReconciliationIncomingMailService
     protected function notifyAdmin($bank, $incomingEmail): void
     {
         try {
+            $request = $bank->request;
+            $customer = $bank->customer;
+            
             // Tüm admin kullanıcılarına bildirim gönder
+            // FilamentAccessManagement kullanıyorsak roles relationship'i var
             $admins = \App\Models\User::whereHas('roles', function($query) {
-                $query->where('name', 'admin');
+                $query->where('name', 'admin')
+                      ->orWhere('name', 'super-admin');
             })->get();
             
             if ($admins->isEmpty()) {
@@ -164,17 +169,40 @@ class ReconciliationIncomingMailService
                 $admins = \App\Models\User::all();
             }
             
+            $attachmentCount = count($incomingEmail->attachments ?? []);
+            $attachmentText = $attachmentCount > 0 
+                ? " ({$attachmentCount} ek)" 
+                : "";
+            
             foreach ($admins as $admin) {
-                // Filament notification
+                // Filament notification - veritabanına kaydet
                 \Filament\Notifications\Notification::make()
                     ->title('Banka Cevabı Geldi')
-                    ->body("{$bank->bank_name} bankasından mutabakat cevabı geldi.")
+                    ->body(
+                        "{$customer->name} firması için " .
+                        "{$bank->bank_name} bankasından " .
+                        "{$request->year} yılı mutabakat cevabı geldi{$attachmentText}."
+                    )
                     ->success()
+                    ->icon('heroicon-o-envelope-open')
+                    ->actions([
+                        \Filament\Notifications\Actions\Action::make('view')
+                            ->label('Görüntüle')
+                            ->url(\App\Filament\Resources\ReconciliationRequestResource::getUrl('view', ['record' => $request->id]))
+                            ->button(),
+                    ])
                     ->sendToDatabase($admin);
             }
+            
+            Log::info('Admin bildirimi gönderildi', [
+                'admin_count' => $admins->count(),
+                'bank_id' => $bank->id,
+                'request_id' => $request->id,
+            ]);
         } catch (\Exception $e) {
             Log::error('Bildirim gönderme hatası', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }
