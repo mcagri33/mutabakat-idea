@@ -19,6 +19,8 @@ return [
                     'allow_self_signed' => true,
                 ],
             ],
+            // ✅ Alternatif: validate_cert parametresi
+            'validate_cert' => false,
         ],
     ],
 ];
