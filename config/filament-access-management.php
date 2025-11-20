@@ -55,7 +55,7 @@ return [
             'menu' => 'heroicon-o-bars-3-bottom-left',
         ],
         'pages' => [
-            Pages\Menu::class,
+          //  Pages\Menu::class,
         ],
         'resources' => [
             Resources\UserResource::class,
