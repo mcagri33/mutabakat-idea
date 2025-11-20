@@ -41,6 +41,8 @@ class MutabakatPanelProvider extends PanelProvider
                 // Widgets\AccountWidget::class, // Kaldırıldı
                 // Widgets\FilamentInfoWidget::class, // Kaldırıldı
             ])
+            ->databaseNotifications() // ✅ Bildirimleri aktif et
+            ->databaseNotificationsPolling('30s') // ✅ Her 30 saniyede bir kontrol et
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
