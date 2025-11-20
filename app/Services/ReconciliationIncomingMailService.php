@@ -178,12 +178,18 @@ class ReconciliationIncomingMailService
                 ? " ({$attachmentCount} ek)" 
                 : "";
             
-            $requestUrl = \App\Filament\Resources\ReconciliationRequestResource::getUrl('view', ['record' => $request->id]);
+            // URL'yi güvenli şekilde oluştur
+            try {
+                $requestUrl = \App\Filament\Resources\ReconciliationRequestResource::getUrl('view', ['record' => $request->id]);
+            } catch (\Exception $e) {
+                $requestUrl = null;
+                Log::warning('Bildirim URL oluşturulamadı', ['error' => $e->getMessage()]);
+            }
             
             foreach ($admins as $admin) {
                 try {
                     // Filament notification - veritabanına kaydet
-                    \Filament\Notifications\Notification::make()
+                    $notification = \Filament\Notifications\Notification::make()
                         ->title('Banka Cevabı Geldi')
                         ->body(
                             "{$customer->name} firması için " .
@@ -191,23 +197,32 @@ class ReconciliationIncomingMailService
                             "{$request->year} yılı mutabakat cevabı geldi{$attachmentText}."
                         )
                         ->success()
-                        ->icon('heroicon-o-envelope-open')
-                        ->actions([
+                        ->icon('heroicon-o-envelope-open');
+                    
+                    // URL varsa action ekle
+                    if ($requestUrl) {
+                        $notification->actions([
                             \Filament\Notifications\Actions\Action::make('view')
                                 ->label('Görüntüle')
                                 ->url($requestUrl)
                                 ->button(),
-                        ])
-                        ->sendToDatabase($admin);
+                        ]);
+                    }
+                    
+                    // Veritabanına kaydet
+                    $notification->sendToDatabase($admin);
                     
                     Log::info('Bildirim gönderildi', [
                         'user_id' => $admin->id,
                         'user_email' => $admin->email,
+                        'bank_id' => $bank->id,
+                        'request_id' => $request->id,
                     ]);
                 } catch (\Exception $e) {
                     Log::error('Bildirim gönderme hatası (kullanıcı)', [
                         'user_id' => $admin->id,
                         'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
             }
