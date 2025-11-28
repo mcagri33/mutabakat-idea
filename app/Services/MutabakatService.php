@@ -61,7 +61,7 @@ class MutabakatService
         // Sadece template'deki mevcut placeholder'ları doldur
         $templateProcessor->setValue('tarih', $date);
         $templateProcessor->setValue('yetkili', $bank->officer_name ?? '.....');
-        $templateProcessor->setValue('musteri_adi', $customer->name ?? '');
+        $templateProcessor->setValue('musteri_adi', $customer->company ?? $customer->name ?? '');
         $templateProcessor->setValue('yil', $request->year ?? date('Y'));
         
         // Banka adı için farklı placeholder formatlarını dene
