@@ -64,9 +64,16 @@ class ReconciliationMailService
             );
 
             // Mail gönder - PDF ekle (DOCX yerine)
-            \Mail::send('emails.bank-reconciliation', $bodyViewData, function ($message) use ($bank, $customer, $subject, $pdfPath) {
+            // CC adresleri: mutabakat@ideadenetim.com.tr + müşteri email'i (varsa)
+            $ccAddresses = ['mutabakat@ideadenetim.com.tr'];
+            
+            if ($customer->email) {
+                $ccAddresses[] = $customer->email;
+            }
+            
+            \Mail::send('emails.bank-reconciliation', $bodyViewData, function ($message) use ($bank, $customer, $subject, $pdfPath, $ccAddresses) {
                 $message->to($bank->officer_email)
-                    ->cc($customer->email ?? null)
+                    ->cc($ccAddresses)
                     ->subject($subject)
                     ->attach($pdfPath, [
                         'as'   => 'Banka-Mutabakat-Mektubu.pdf',
