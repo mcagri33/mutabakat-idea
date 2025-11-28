@@ -11,6 +11,7 @@
         "laravel/framework": "^11.0",
         "laravel/tinker": "^2.9",
         "phpoffice/phpspreadsheet": "^2.0",
+        "phpoffice/phpword": "^1.4",
         "solution-forest/filament-access-management": "^2.2",
         "webklex/laravel-imap": "^6.2"
     },
