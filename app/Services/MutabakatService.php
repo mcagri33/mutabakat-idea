@@ -53,6 +53,7 @@ class MutabakatService
         $templateProcessor->setValue('yetkili', $bank->officer_name ?? '.....');
         $templateProcessor->setValue('musteri_adi', $customer->name ?? '');
         $templateProcessor->setValue('yil', $request->year ?? date('Y'));
+        $templateProcessor->setValue('banka_adi', $bank->bank_name ?? '');
 
         // Kaşe resmini ekle (üzerinde imza var, ayrı imza gerekmez)
         $this->addStampImage($templateProcessor);
