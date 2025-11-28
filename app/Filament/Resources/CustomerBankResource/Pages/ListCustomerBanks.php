@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\CustomerBankResource\Pages;
 
 use App\Filament\Resources\CustomerBankResource;
-use App\Imports\CustomerBankImport;
 use App\Models\Customer;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -116,11 +115,6 @@ class ListCustomerBanks extends ListRecords
                         return Response::stream($callback, 200, $headers);
                     }
                 }),
-            \EightyNine\ExcelImport\ExcelImportAction::make()
-                ->label('Excel İçe Aktar')
-                ->icon('heroicon-o-arrow-down-tray')
-                ->color('success')
-                ->use(CustomerBankImport::class),
             Actions\CreateAction::make(),
         ];
     }
