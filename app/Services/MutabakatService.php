@@ -48,12 +48,58 @@ class MutabakatService
         // Tarih formatı
         $date = now()->format('d.m.Y');
 
+        // Banka adı değerini al ve logla
+        $bankName = $bank->bank_name ?? '';
+        
+        Log::info('Banka bilgileri kontrol ediliyor', [
+            'bank_id' => $bank->id,
+            'bank_name' => $bankName,
+            'bank_name_length' => strlen($bankName),
+            'bank_object_exists' => !empty($bank),
+        ]);
+
         // Sadece template'deki mevcut placeholder'ları doldur
         $templateProcessor->setValue('tarih', $date);
         $templateProcessor->setValue('yetkili', $bank->officer_name ?? '.....');
         $templateProcessor->setValue('musteri_adi', $customer->name ?? '');
         $templateProcessor->setValue('yil', $request->year ?? date('Y'));
-        $templateProcessor->setValue('banka_adi', $bank->bank_name ?? '');
+        
+        // Banka adı için farklı placeholder formatlarını dene
+        $placeholders = ['banka_adi', ' banka_adi', 'banka_adi ', ' banka_adi '];
+        $setSuccessfully = false;
+        
+        foreach ($placeholders as $placeholder) {
+            try {
+                $templateProcessor->setValue(trim($placeholder), $bankName);
+                Log::info("Banka adı placeholder dolduruldu: '{$placeholder}'", [
+                    'placeholder' => $placeholder,
+                    'value' => $bankName,
+                    'value_length' => strlen($bankName)
+                ]);
+                $setSuccessfully = true;
+                break; // Başarılı olursa döngüden çık
+            } catch (\Exception $e) {
+                Log::debug("Placeholder bulunamadı: '{$placeholder}'", [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        // Eğer hiçbir placeholder çalışmadıysa, normal placeholder'ı dene
+        if (!$setSuccessfully) {
+            try {
+                $templateProcessor->setValue('banka_adi', $bankName);
+                Log::info('Banka adı normal placeholder ile dolduruldu', [
+                    'value' => $bankName
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Banka adı placeholder hiçbir formatta bulunamadı', [
+                    'bank_name' => $bankName,
+                    'tried_placeholders' => $placeholders,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
 
         // Kaşe resmini ekle (üzerinde imza var, ayrı imza gerekmez)
         $this->addStampImage($templateProcessor);
