@@ -83,6 +83,7 @@ class ReconciliationRequestResource extends Resource
                     ->schema([
                         Forms\Components\FileUpload::make('attachments')
                             ->label('Dosyalar')
+                            ->disk('local')
                             ->directory('reconciliation_request_attachments')
                             ->multiple()
                             ->acceptedFileTypes([
@@ -96,6 +97,7 @@ class ReconciliationRequestResource extends Resource
                             ->maxSize(10240) // 10MB
                             ->downloadable()
                             ->previewable()
+                            ->visibility('private')
                             ->helperText('Mutabakat isteği ile birlikte gönderilecek ek dosyalar. PDF, Word veya resim formatında. Maksimum 10MB per dosya.')
                             ->columnSpanFull(),
                     ])

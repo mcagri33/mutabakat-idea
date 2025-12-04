@@ -32,6 +32,7 @@ class DocumentsRelationManager extends RelationManager
 
                     Forms\Components\FileUpload::make('file_path')
                         ->label('Mutabakat Belgesi')
+                        ->disk('local')
                         ->directory('reconciliation_documents')
                         ->acceptedFileTypes([
                             'application/pdf',
@@ -44,7 +45,8 @@ class DocumentsRelationManager extends RelationManager
                         ->required()
                         ->helperText('PDF, Word veya resim formatında mutabakat belgesi yükleyebilirsiniz. Maksimum 10MB.')
                         ->downloadable()
-                        ->previewable(),
+                        ->previewable()
+                        ->visibility('private'),
 
                     Forms\Components\Textarea::make('notes')
                         ->label('Notlar / Açıklama')
@@ -93,10 +95,10 @@ class DocumentsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('file_size')
                     ->label('Boyut')
                     ->getStateUsing(function ($record) {
-                        if (!Storage::exists($record->file_path)) {
+                        if (!Storage::disk('local')->exists($record->file_path)) {
                             return '-';
                         }
-                        $size = Storage::size($record->file_path);
+                        $size = Storage::disk('local')->size($record->file_path);
                         if ($size < 1024) {
                             return $size . ' B';
                         } elseif ($size < 1048576) {
@@ -176,7 +178,7 @@ class DocumentsRelationManager extends RelationManager
                         }
                         
                         // Storage kullanarak güvenli indirme
-                        if (!Storage::exists($filePath)) {
+                        if (!Storage::disk('local')->exists($filePath)) {
                             \Filament\Notifications\Notification::make()
                                 ->title('Dosya Bulunamadı')
                                 ->body('Dosya sistemde bulunamadı.')
@@ -185,7 +187,7 @@ class DocumentsRelationManager extends RelationManager
                             return;
                         }
                         
-                        return Storage::download($filePath, $record->file_name ?? basename($filePath));
+                        return Storage::disk('local')->download($filePath, $record->file_name ?? basename($filePath));
                     }),
 
                 Tables\Actions\EditAction::make(),
