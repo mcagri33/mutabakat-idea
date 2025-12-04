@@ -80,20 +80,72 @@ class ReconciliationMailService
                         'mime' => 'application/pdf',
                     ]);
                 
+                // Request'i fresh yükle (attachments dahil)
+                $request->refresh();
+                
                 // Mutabakat isteğindeki ek dosyaları ekle
-                if ($request->attachments && is_array($request->attachments)) {
-                    foreach ($request->attachments as $attachmentPath) {
-                        $fullPath = storage_path('app/' . $attachmentPath);
+                if ($request->attachments && !empty($request->attachments)) {
+                    Log::info('Ek dosyalar bulundu', [
+                        'request_id' => $request->id,
+                        'attachments' => $request->attachments,
+                        'attachments_count' => is_array($request->attachments) ? count($request->attachments) : 1
+                    ]);
+                    
+                    // Array kontrolü - Filament multiple FileUpload array döner
+                    $attachments = is_array($request->attachments) ? $request->attachments : [$request->attachments];
+                    
+                    foreach ($attachments as $attachmentPath) {
+                        if (empty($attachmentPath)) {
+                            continue;
+                        }
+                        
+                        // Path'i normalize et (backslash'ları düzelt, başlangıç slash'ını kontrol et)
+                        $normalizedPath = str_replace('\\', '/', $attachmentPath);
+                        
+                        // Eğer path zaten 'reconciliation_request_attachments/' ile başlıyorsa direkt kullan
+                        // Değilse ekle
+                        if (!str_starts_with($normalizedPath, 'reconciliation_request_attachments/')) {
+                            $normalizedPath = 'reconciliation_request_attachments/' . basename($normalizedPath);
+                        }
+                        
+                        $fullPath = storage_path('app/' . $normalizedPath);
+                        
+                        Log::info('Dosya kontrolü yapılıyor', [
+                            'attachment_path' => $attachmentPath,
+                            'normalized_path' => $normalizedPath,
+                            'full_path' => $fullPath,
+                            'exists' => file_exists($fullPath)
+                        ]);
+                        
                         if (file_exists($fullPath)) {
-                            $fileName = basename($attachmentPath);
+                            $fileName = basename($normalizedPath);
                             $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+                            
+                            Log::info('Ek dosya eklendi', [
+                                'file_path' => $fullPath,
+                                'file_name' => $fileName,
+                                'mime_type' => $mimeType
+                            ]);
                             
                             $message->attach($fullPath, [
                                 'as'   => $fileName,
                                 'mime' => $mimeType,
                             ]);
+                        } else {
+                            Log::warning('Ek dosya bulunamadı', [
+                                'attachment_path' => $attachmentPath,
+                                'normalized_path' => $normalizedPath,
+                                'full_path' => $fullPath,
+                                'storage_app_path' => storage_path('app')
+                            ]);
                         }
                     }
+                } else {
+                    Log::info('Ek dosya bulunamadı (attachments boş)', [
+                        'request_id' => $request->id,
+                        'attachments_value' => $request->attachments,
+                        'attachments_type' => gettype($request->attachments)
+                    ]);
                 }
             });
 
@@ -111,7 +163,8 @@ class ReconciliationMailService
             Log::info('Banka mutabakat maili başarıyla gönderildi', [
                 'bank_id' => $bank->id,
                 'email' => $bank->officer_email,
-                'pdf_path' => $pdfPath
+                'pdf_path' => $pdfPath,
+                'attachments_count' => $request->attachments && is_array($request->attachments) ? count($request->attachments) : 0
             ]);
 
         } catch (\Exception $e) {
