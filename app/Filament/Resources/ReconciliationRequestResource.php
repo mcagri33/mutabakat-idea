@@ -78,8 +78,31 @@ class ReconciliationRequestResource extends Resource
                     ->maxLength(1000)
                     ->helperText('Mutabakat talebi ile ilgili ek notlar (maksimum 1000 karakter)')
                     ->columnSpanFull(),
+
+                Forms\Components\Section::make('Ek Dosyalar')
+                    ->schema([
+                        Forms\Components\FileUpload::make('attachments')
+                            ->label('Dosyalar')
+                            ->directory('reconciliation_request_attachments')
+                            ->multiple()
+                            ->acceptedFileTypes([
+                                'application/pdf',
+                                'application/msword',
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                'image/png',
+                                'image/jpeg',
+                                'image/jpg',
+                            ])
+                            ->maxSize(10240) // 10MB
+                            ->downloadable()
+                            ->previewable()
+                            ->helperText('Mutabakat isteği ile birlikte gönderilecek ek dosyalar. PDF, Word veya resim formatında. Maksimum 10MB per dosya.')
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible()
+                    ->collapsed(),
             ]);
-    }
+        }
 
     public static function table(Table $table): Table
     {

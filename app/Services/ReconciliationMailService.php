@@ -71,7 +71,7 @@ class ReconciliationMailService
                 $ccAddresses[] = $customer->email;
             }
             
-            \Mail::send('emails.bank-reconciliation', $bodyViewData, function ($message) use ($bank, $customer, $subject, $pdfPath, $ccAddresses) {
+            \Mail::send('emails.bank-reconciliation', $bodyViewData, function ($message) use ($bank, $customer, $subject, $pdfPath, $ccAddresses, $request) {
                 $message->to($bank->officer_email)
                     ->cc($ccAddresses)
                     ->subject($subject)
@@ -79,6 +79,22 @@ class ReconciliationMailService
                         'as'   => 'Banka-Mutabakat-Mektubu.pdf',
                         'mime' => 'application/pdf',
                     ]);
+                
+                // Mutabakat isteğindeki ek dosyaları ekle
+                if ($request->attachments && is_array($request->attachments)) {
+                    foreach ($request->attachments as $attachmentPath) {
+                        $fullPath = storage_path('app/' . $attachmentPath);
+                        if (file_exists($fullPath)) {
+                            $fileName = basename($attachmentPath);
+                            $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+                            
+                            $message->attach($fullPath, [
+                                'as'   => $fileName,
+                                'mime' => $mimeType,
+                            ]);
+                        }
+                    }
+                }
             });
 
             // Mail log

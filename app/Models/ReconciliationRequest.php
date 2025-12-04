@@ -16,12 +16,14 @@ class ReconciliationRequest extends Model
         'sent_at',
         'received_at',
         'notes',
+        'attachments',
     ];
 
     protected $casts = [
         'requested_at' => 'datetime',
         'sent_at'      => 'datetime',
         'received_at'  => 'datetime',
+        'attachments'  => 'array',
     ];
 
     /** Firma ilişkisi */
