@@ -13,8 +13,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
-use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsPage extends Page implements HasForms
 {
@@ -191,14 +190,10 @@ class ReportsPage extends Page implements HasForms
         ];
     }
 
-    public function exportExcel(): BinaryFileResponse
+    public function exportExcel(): StreamedResponse
     {
-        $filename = 'mutabakat_talepleri_' . now()->format('Y-m-d_His') . '.xlsx';
-        
-        return Excel::download(
-            new ReconciliationRequestExport($this->reportData),
-            $filename
-        );
+        $export = new ReconciliationRequestExport($this->reportData);
+        return $export->export();
     }
 }
 

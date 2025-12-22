@@ -2,17 +2,14 @@
 
 namespace App\Exports;
 
-use App\Models\ReconciliationRequest;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithTitle;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Font;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class ReconciliationRequestExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithTitle
+class ReconciliationRequestExport
 {
     protected $data;
 
@@ -21,14 +18,14 @@ class ReconciliationRequestExport implements FromCollection, WithHeadings, WithM
         $this->data = $data;
     }
 
-    public function collection()
+    public function export(): StreamedResponse
     {
-        return $this->data;
-    }
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Mutabakat Talepleri');
 
-    public function headings(): array
-    {
-        return [
+        // Başlıklar
+        $headings = [
             'ID',
             'Firma',
             'Yıl',
@@ -40,10 +37,29 @@ class ReconciliationRequestExport implements FromCollection, WithHeadings, WithM
             'Mail Gönderim Tarihi',
             'Yanıt Alma Tarihi',
         ];
-    }
 
-    public function map($request): array
-    {
+        // Başlıkları yaz
+        $sheet->fromArray([$headings], null, 'A1');
+
+        // Başlık stilini ayarla
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'E3F2FD'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ];
+        $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
+
+        // Verileri yaz
+        $row = 2;
         $statusLabels = [
             'pending' => 'Beklemede',
             'mail_sent' => 'Mail Gönderildi',
@@ -53,40 +69,45 @@ class ReconciliationRequestExport implements FromCollection, WithHeadings, WithM
             'failed' => 'Hata',
         ];
 
-        return [
-            $request->id,
-            $request->customer->name ?? '-',
-            $request->year,
-            $request->type === 'banka' ? 'Banka' : 'Cari',
-            $statusLabels[$request->status] ?? $request->status,
-            $request->banks_count ?? 0,
-            $request->documents_count ?? 0,
-            $request->created_at ? $request->created_at->format('d.m.Y H:i') : '-',
-            $request->sent_at ? $request->sent_at->format('d.m.Y H:i') : '-',
-            $request->received_at ? $request->received_at->format('d.m.Y H:i') : '-',
-        ];
-    }
+        foreach ($this->data as $request) {
+            $sheet->setCellValue('A' . $row, $request->id);
+            $sheet->setCellValue('B' . $row, $request->customer->name ?? '-');
+            $sheet->setCellValue('C' . $row, $request->year);
+            $sheet->setCellValue('D' . $row, $request->type === 'banka' ? 'Banka' : 'Cari');
+            $sheet->setCellValue('E' . $row, $statusLabels[$request->status] ?? $request->status);
+            $sheet->setCellValue('F' . $row, $request->banks_count ?? 0);
+            $sheet->setCellValue('G' . $row, $request->documents_count ?? 0);
+            $sheet->setCellValue('H' . $row, $request->created_at ? $request->created_at->format('d.m.Y H:i') : '-');
+            $sheet->setCellValue('I' . $row, $request->sent_at ? $request->sent_at->format('d.m.Y H:i') : '-');
+            $sheet->setCellValue('J' . $row, $request->received_at ? $request->received_at->format('d.m.Y H:i') : '-');
+            $row++;
+        }
 
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => [
-                'font' => ['bold' => true, 'size' => 12],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => 'E3F2FD'],
-                ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER,
-                ],
-            ],
-        ];
-    }
+        // Kolon genişliklerini ayarla
+        $sheet->getColumnDimension('A')->setWidth(10);
+        $sheet->getColumnDimension('B')->setWidth(30);
+        $sheet->getColumnDimension('C')->setWidth(10);
+        $sheet->getColumnDimension('D')->setWidth(15);
+        $sheet->getColumnDimension('E')->setWidth(20);
+        $sheet->getColumnDimension('F')->setWidth(15);
+        $sheet->getColumnDimension('G')->setWidth(15);
+        $sheet->getColumnDimension('H')->setWidth(20);
+        $sheet->getColumnDimension('I')->setWidth(20);
+        $sheet->getColumnDimension('J')->setWidth(20);
 
-    public function title(): string
-    {
-        return 'Mutabakat Talepleri';
+        // Dosya adı
+        $filename = 'mutabakat_talepleri_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        // StreamedResponse oluştur
+        $writer = new Xlsx($spreadsheet);
+        
+        return new StreamedResponse(function () use ($writer) {
+            $writer->save('php://output');
+        }, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 }
 
