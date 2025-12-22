@@ -4,8 +4,11 @@ namespace App\Filament\Resources\CustomerBankResource\Pages;
 
 use App\Filament\Resources\CustomerBankResource;
 use App\Models\Customer;
+use App\Imports\CustomerBankImport;
 use Filament\Actions;
+use Filament\Forms;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Response;
 
 class ListCustomerBanks extends ListRecords
@@ -115,6 +118,67 @@ class ListCustomerBanks extends ListRecords
                         return Response::stream($callback, 200, $headers);
                     }
                 }),
+            Actions\Action::make('import')
+                ->label('Excel\'den İçe Aktar')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('success')
+                ->form([
+                    Forms\Components\FileUpload::make('file')
+                        ->label('Excel Dosyası')
+                        ->acceptedFileTypes([
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+                            'application/vnd.ms-excel', // .xls
+                        ])
+                        ->required()
+                        ->helperText('Excel dosyasını seçin (.xlsx veya .xls formatında)')
+                        ->disk('local')
+                        ->directory('imports')
+                        ->visibility('private'),
+                ])
+                ->action(function (array $data) {
+                    $filePath = storage_path('app/' . $data['file']);
+                    
+                    if (!file_exists($filePath)) {
+                        Notification::make()
+                            ->title('Hata')
+                            ->body('Dosya bulunamadı.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    $import = new CustomerBankImport();
+                    $results = $import->import($filePath);
+
+                    // Dosyayı sil
+                    @unlink($filePath);
+
+                    // Sonuçları göster
+                    $message = sprintf(
+                        'İçe aktarma tamamlandı: %d yeni kayıt, %d güncellendi, %d atlandı',
+                        $results['success'],
+                        $results['updated'],
+                        $results['skipped']
+                    );
+
+                    if (!empty($results['errors'])) {
+                        $errorCount = count($results['errors']);
+                        $errorMessage = "\n\nHatalar:\n" . implode("\n", array_slice($results['errors'], 0, 10));
+                        if ($errorCount > 10) {
+                            $errorMessage .= "\n... ve " . ($errorCount - 10) . " hata daha";
+                        }
+                        $message .= $errorMessage;
+                    }
+
+                    Notification::make()
+                        ->title('İçe Aktarma Sonucu')
+                        ->body($message)
+                        ->success()
+                        ->send();
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Excel Dosyası İçe Aktar')
+                ->modalDescription('Excel dosyasındaki banka bilgilerini sisteme aktarın. Mevcut kayıtlar e-posta adresine göre güncellenir.'),
             Actions\CreateAction::make(),
         ];
     }

@@ -4,70 +4,109 @@ namespace App\Imports;
 
 use App\Models\Customer;
 use App\Models\CustomerBank;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
-class CustomerBankImport implements ToModel, WithHeadingRow, WithValidation
+class CustomerBankImport
 {
-    public function model(array $row)
+    public function import($filePath): array
     {
-        // WithHeadingRow başlıkları küçük harfe çevirir ve boşlukları alt çizgiye çevirir
-        // "Firma Adı" -> "firma_adi", "E-posta" -> "e_posta" vb.
-        $customerName = $row['firma_adi'] ?? $row['firma adi'] ?? null;
-        if (!$customerName) {
-            return null;
+        $results = [
+            'success' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => [],
+        ];
+
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+
+            // İlk satır başlık, atla
+            $headers = array_shift($rows);
+            
+            // Başlıkları normalize et (küçük harf, boşlukları alt çizgiye çevir)
+            $normalizedHeaders = [];
+            foreach ($headers as $index => $header) {
+                $normalizedHeaders[$index] = strtolower(str_replace([' ', '-', '/'], '_', trim($header)));
+            }
+
+            foreach ($rows as $rowIndex => $row) {
+                $rowNumber = $rowIndex + 2; // Excel satır numarası (başlık + 1)
+                
+                try {
+                    // Satırı başlıklarla eşleştir
+                    $rowData = [];
+                    foreach ($normalizedHeaders as $colIndex => $header) {
+                        $rowData[$header] = $row[$colIndex] ?? null;
+                    }
+
+                    // Gerekli alanları kontrol et
+                    $customerName = $this->getValue($rowData, ['firma_adi', 'firma adi']);
+                    $bankName = $this->getValue($rowData, ['banka_adi', 'banka adi']);
+                    $email = $this->getValue($rowData, ['e_posta', 'e-posta', 'eposta']);
+
+                    if (!$customerName || !$bankName || !$email) {
+                        $results['skipped']++;
+                        $results['errors'][] = "Satır {$rowNumber}: Eksik bilgi (Firma, Banka veya E-posta)";
+                        continue;
+                    }
+
+                    // Firma bul
+                    $customer = Customer::where('name', $customerName)
+                        ->orWhere('company', $customerName)
+                        ->first();
+
+                    if (!$customer) {
+                        $results['skipped']++;
+                        $results['errors'][] = "Satır {$rowNumber}: Firma bulunamadı: {$customerName}";
+                        continue;
+                    }
+
+                    // E-posta ile mevcut kaydı kontrol et
+                    $existing = CustomerBank::where('customer_id', $customer->id)
+                        ->where('officer_email', $email)
+                        ->first();
+
+                    $data = [
+                        'customer_id' => $customer->id,
+                        'bank_name' => $bankName,
+                        'branch_name' => $this->getValue($rowData, ['sube_adi', 'sube adi']),
+                        'officer_name' => $this->getValue($rowData, ['yetkili_masa_memuru', 'yetkili / masa memuru', 'yetkili']),
+                        'officer_email' => $email,
+                        'officer_phone' => $this->getValue($rowData, ['telefon', 'phone']),
+                        'is_active' => $this->parseBoolean($this->getValue($rowData, ['aktif', 'active'], '1')),
+                    ];
+
+                    if ($existing) {
+                        // Mevcut kaydı güncelle
+                        $existing->update($data);
+                        $results['updated']++;
+                    } else {
+                        // Yeni kayıt oluştur
+                        CustomerBank::create($data);
+                        $results['success']++;
+                    }
+                } catch (\Exception $e) {
+                    $results['skipped']++;
+                    $results['errors'][] = "Satır {$rowNumber}: " . $e->getMessage();
+                }
+            }
+        } catch (\Exception $e) {
+            $results['errors'][] = "Dosya okuma hatası: " . $e->getMessage();
         }
 
-        $customer = Customer::where('name', $customerName)
-            ->orWhere('company', $customerName)
-            ->first();
-
-        if (!$customer) {
-            return null;
-        }
-
-        // E-posta ile mevcut kaydı kontrol et
-        $email = $row['e_posta'] ?? $row['e-posta'] ?? null;
-        $existing = null;
-        if ($email) {
-            $existing = CustomerBank::where('customer_id', $customer->id)
-                ->where('officer_email', $email)
-                ->first();
-        }
-
-        if ($existing) {
-            // Mevcut kaydı güncelle
-            $existing->update([
-                'bank_name' => $row['banka_adi'] ?? $row['banka adi'] ?? '',
-                'branch_name' => $row['sube_adi'] ?? $row['sube adi'] ?? null,
-                'officer_name' => $row['yetkili_masa_memuru'] ?? $row['yetkili / masa memuru'] ?? null,
-                'officer_email' => $email,
-                'officer_phone' => $row['telefon'] ?? null,
-                'is_active' => $this->parseBoolean($row['aktif'] ?? '1'),
-            ]);
-            return null; // Güncelleme yapıldı, yeni kayıt oluşturma
-        }
-
-        // Yeni kayıt oluştur
-        return new CustomerBank([
-            'customer_id' => $customer->id,
-            'bank_name' => $row['banka_adi'] ?? $row['banka adi'] ?? '',
-            'branch_name' => $row['sube_adi'] ?? $row['sube adi'] ?? null,
-            'officer_name' => $row['yetkili_masa_memuru'] ?? $row['yetkili / masa memuru'] ?? null,
-            'officer_email' => $email,
-            'officer_phone' => $row['telefon'] ?? null,
-            'is_active' => $this->parseBoolean($row['aktif'] ?? '1'),
-        ]);
+        return $results;
     }
 
-    public function rules(): array
+    private function getValue(array $rowData, array $keys, $default = null)
     {
-        return [
-            'firma_adi' => 'required',
-            'banka_adi' => 'required',
-            'e_posta' => 'required|email',
-        ];
+        foreach ($keys as $key) {
+            if (isset($rowData[$key]) && $rowData[$key] !== null && $rowData[$key] !== '') {
+                return trim($rowData[$key]);
+            }
+        }
+        return $default;
     }
 
     private function parseBoolean($value): bool
@@ -77,7 +116,7 @@ class CustomerBankImport implements ToModel, WithHeadingRow, WithValidation
         }
         
         $value = strtolower(trim((string) $value));
-        return in_array($value, ['1', 'true', 'evet', 'yes', 'aktif']);
+        return in_array($value, ['1', 'true', 'evet', 'yes', 'aktif', 'active']);
     }
 }
 
