@@ -22,23 +22,49 @@ class CustomerBankImport
             $worksheet = $spreadsheet->getActiveSheet();
             $rows = $worksheet->toArray();
 
+            // Dosya boş kontrolü
+            if (empty($rows)) {
+                $results['errors'][] = "Dosya boş veya geçersiz.";
+                return $results;
+            }
+
             // İlk satır başlık, atla
             $headers = array_shift($rows);
             
             // Başlıkları normalize et (küçük harf, boşlukları alt çizgiye çevir)
             $normalizedHeaders = [];
             foreach ($headers as $index => $header) {
-                $normalizedHeaders[$index] = strtolower(str_replace([' ', '-', '/'], '_', trim($header)));
+                $normalizedHeaders[$index] = strtolower(str_replace([' ', '-', '/'], '_', trim((string)$header)));
             }
 
             foreach ($rows as $rowIndex => $row) {
                 $rowNumber = $rowIndex + 2; // Excel satır numarası (başlık + 1)
                 
+                // Boş satır kontrolü - tüm hücreler boşsa atla
+                $isEmptyRow = true;
+                foreach ($row as $cell) {
+                    if ($cell !== null && trim((string)$cell) !== '') {
+                        $isEmptyRow = false;
+                        break;
+                    }
+                }
+                if ($isEmptyRow) {
+                    continue; // Boş satırı atla
+                }
+                
                 try {
                     // Satırı başlıklarla eşleştir
                     $rowData = [];
                     foreach ($normalizedHeaders as $colIndex => $header) {
-                        $rowData[$header] = $row[$colIndex] ?? null;
+                        // Satır uzunluğu kontrolü
+                        $rowData[$header] = isset($row[$colIndex]) ? $row[$colIndex] : null;
+                        // Null ve boş string kontrolü
+                        if ($rowData[$header] !== null) {
+                            $rowData[$header] = trim((string)$rowData[$header]);
+                            if ($rowData[$header] === '') {
+                                $rowData[$header] = null;
+                            }
+                        }
                     }
 
                     // Gerekli alanları kontrol et
@@ -53,20 +79,20 @@ class CustomerBankImport
                     }
 
                     // Firma bul
-                    $customer = Customer::where('name', $customerName)
-                        ->orWhere('company', $customerName)
-                        ->first();
+        $customer = Customer::where('name', $customerName)
+            ->orWhere('company', $customerName)
+            ->first();
 
-                    if (!$customer) {
+        if (!$customer) {
                         $results['skipped']++;
                         $results['errors'][] = "Satır {$rowNumber}: Firma bulunamadı: {$customerName}";
                         continue;
-                    }
+        }
 
-                    // E-posta ile mevcut kaydı kontrol et
-                    $existing = CustomerBank::where('customer_id', $customer->id)
-                        ->where('officer_email', $email)
-                        ->first();
+        // E-posta ile mevcut kaydı kontrol et
+            $existing = CustomerBank::where('customer_id', $customer->id)
+                ->where('officer_email', $email)
+                ->first();
 
                     $data = [
                         'customer_id' => $customer->id,
@@ -78,8 +104,8 @@ class CustomerBankImport
                         'is_active' => $this->parseBoolean($this->getValue($rowData, ['aktif', 'active'], '1')),
                     ];
 
-                    if ($existing) {
-                        // Mevcut kaydı güncelle
+        if ($existing) {
+            // Mevcut kaydı güncelle
                         $existing->update($data);
                         $results['updated']++;
                     } else {
@@ -103,7 +129,7 @@ class CustomerBankImport
     {
         foreach ($keys as $key) {
             if (isset($rowData[$key]) && $rowData[$key] !== null && $rowData[$key] !== '') {
-                return trim($rowData[$key]);
+                return trim((string)$rowData[$key]);
             }
         }
         return $default;
@@ -111,12 +137,17 @@ class CustomerBankImport
 
     private function parseBoolean($value): bool
     {
+        // Null kontrolü
+        if ($value === null || $value === '') {
+            return true; // Varsayılan olarak true
+        }
+        
         if (is_bool($value)) {
             return $value;
         }
         
         $value = strtolower(trim((string) $value));
-        return in_array($value, ['1', 'true', 'evet', 'yes', 'aktif', 'active']);
+        return in_array($value, ['1', 'true', 'evet', 'yes', 'aktif', 'active'], true);
     }
 }
 
