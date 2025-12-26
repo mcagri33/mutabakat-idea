@@ -12,7 +12,6 @@ class CustomerBankImport
     {
         $results = [
             'success' => 0,
-            'updated' => 0,
             'skipped' => 0,
             'errors' => [],
         ];
@@ -89,11 +88,7 @@ class CustomerBankImport
                         continue;
         }
 
-        // E-posta ile mevcut kaydı kontrol et
-            $existing = CustomerBank::where('customer_id', $customer->id)
-                ->where('officer_email', $email)
-                ->first();
-
+                    // Her zaman yeni kayıt oluştur (güncelleme yapılmaz)
                     $data = [
                         'customer_id' => $customer->id,
                         'bank_name' => $bankName,
@@ -104,15 +99,9 @@ class CustomerBankImport
                         'is_active' => $this->parseBoolean($this->getValue($rowData, ['aktif', 'active'], '1')),
                     ];
 
-        if ($existing) {
-            // Mevcut kaydı güncelle
-                        $existing->update($data);
-                        $results['updated']++;
-                    } else {
-                        // Yeni kayıt oluştur
-                        CustomerBank::create($data);
-                        $results['success']++;
-                    }
+                    // Yeni kayıt oluştur
+                    CustomerBank::create($data);
+                    $results['success']++;
                 } catch (\Exception $e) {
                     $results['skipped']++;
                     $results['errors'][] = "Satır {$rowNumber}: " . $e->getMessage();

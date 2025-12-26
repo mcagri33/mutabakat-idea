@@ -155,9 +155,8 @@ class ListCustomerBanks extends ListRecords
 
                     // Sonuçları göster
                     $message = sprintf(
-                        'İçe aktarma tamamlandı: %d yeni kayıt, %d güncellendi, %d atlandı',
+                        'İçe aktarma tamamlandı: %d yeni kayıt eklendi, %d kayıt atlandı',
                         $results['success'],
-                        $results['updated'],
                         $results['skipped']
                     );
 
@@ -178,7 +177,7 @@ class ListCustomerBanks extends ListRecords
                 })
                 ->requiresConfirmation()
                 ->modalHeading('Excel Dosyası İçe Aktar')
-                ->modalDescription('Excel dosyasındaki banka bilgilerini sisteme aktarın. Mevcut kayıtlar e-posta adresine göre güncellenir.'),
+                ->modalDescription('Excel dosyasındaki banka bilgilerini sisteme aktarın. Her satır için yeni bir kayıt oluşturulur.'),
             Actions\CreateAction::make(),
         ];
     }
