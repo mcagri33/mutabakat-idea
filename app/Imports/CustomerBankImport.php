@@ -77,16 +77,17 @@ class CustomerBankImport
                         continue;
                     }
 
-                    // Firma bul
-        $customer = Customer::where('name', $customerName)
-            ->orWhere('company', $customerName)
-            ->first();
+                    // Firma bul - önce name'e göre, bulamazsa company'e göre ara
+                    $customer = Customer::where('name', $customerName)->first();
+                    if (!$customer) {
+                        $customer = Customer::where('company', $customerName)->first();
+                    }
 
-        if (!$customer) {
+                    if (!$customer) {
                         $results['skipped']++;
                         $results['errors'][] = "Satır {$rowNumber}: Firma bulunamadı: {$customerName}";
                         continue;
-        }
+                    }
 
                     // Her zaman yeni kayıt oluştur (güncelleme yapılmaz)
                     $data = [
@@ -102,6 +103,18 @@ class CustomerBankImport
                     // Yeni kayıt oluştur
                     CustomerBank::create($data);
                     $results['success']++;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    // Veritabanı hatası (unique constraint, foreign key vb.)
+                    $results['skipped']++;
+                    $errorMsg = "Satır {$rowNumber}: Veritabanı hatası";
+                    if (str_contains($e->getMessage(), 'foreign key')) {
+                        $errorMsg .= " - Firma ID geçersiz";
+                    } elseif (str_contains($e->getMessage(), 'constraint')) {
+                        $errorMsg .= " - Veri kısıtlaması hatası";
+                    } else {
+                        $errorMsg .= " - " . $e->getMessage();
+                    }
+                    $results['errors'][] = $errorMsg;
                 } catch (\Exception $e) {
                     $results['skipped']++;
                     $results['errors'][] = "Satır {$rowNumber}: " . $e->getMessage();
