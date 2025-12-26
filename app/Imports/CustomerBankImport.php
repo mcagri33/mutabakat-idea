@@ -66,14 +66,21 @@ class CustomerBankImport
                         }
                     }
 
-                    // Gerekli alanları kontrol et
-                    $customerName = $this->getValue($rowData, ['firma_adi', 'firma adi']);
-                    $bankName = $this->getValue($rowData, ['banka_adi', 'banka adi']);
-                    $email = $this->getValue($rowData, ['e_posta', 'e-posta', 'eposta']);
+                    // Gerekli alanları kontrol et - önce tüm olası başlık varyasyonlarını dene
+                    $customerName = $this->getValue($rowData, ['firma_adi', 'firma adi', 'firma']);
+                    $bankName = $this->getValue($rowData, ['banka_adi', 'banka adi', 'banka']);
+                    $email = $this->getValue($rowData, ['e_posta', 'e-posta', 'eposta', 'email', 'e_mail']);
 
-                    if (!$customerName || !$bankName || !$email) {
+                    if (empty($customerName) || empty($bankName) || empty($email)) {
                         $results['skipped']++;
-                        $results['errors'][] = "Satır {$rowNumber}: Eksik bilgi (Firma, Banka veya E-posta)";
+                        $missingFields = [];
+                        if (empty($customerName)) $missingFields[] = 'Firma Adı';
+                        if (empty($bankName)) $missingFields[] = 'Banka Adı';
+                        if (empty($email)) $missingFields[] = 'E-posta';
+                        
+                        // Debug: Mevcut başlıkları göster
+                        $availableHeaders = array_keys($rowData);
+                        $results['errors'][] = "Satır {$rowNumber}: Eksik bilgi (" . implode(', ', $missingFields) . "). Mevcut başlıklar: " . implode(', ', $availableHeaders);
                         continue;
                     }
 
@@ -130,8 +137,12 @@ class CustomerBankImport
     private function getValue(array $rowData, array $keys, $default = null)
     {
         foreach ($keys as $key) {
-            if (isset($rowData[$key]) && $rowData[$key] !== null && $rowData[$key] !== '') {
-                return trim((string)$rowData[$key]);
+            if (isset($rowData[$key]) && $rowData[$key] !== null) {
+                $value = trim((string)$rowData[$key]);
+                // Trim sonrası boş string kontrolü
+                if ($value !== '') {
+                    return $value;
+                }
             }
         }
         return $default;
