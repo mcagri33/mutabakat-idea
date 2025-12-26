@@ -30,10 +30,15 @@ class CustomerBankImport
             // İlk satır başlık, atla
             $headers = array_shift($rows);
             
-            // Başlıkları normalize et (küçük harf, boşlukları alt çizgiye çevir)
+            // Başlıkları normalize et (küçük harf, boşlukları alt çizgiye çevir, Türkçe karakterleri dönüştür)
             $normalizedHeaders = [];
             foreach ($headers as $index => $header) {
-                $normalizedHeaders[$index] = strtolower(str_replace([' ', '-', '/'], '_', trim((string)$header)));
+                $normalized = mb_strtolower(trim((string)$header), 'UTF-8');
+                $normalized = str_replace([' ', '-', '/'], '_', $normalized);
+                // Türkçe karakterleri normalize et
+                $turkishChars = ['ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ş' => 's', 'ö' => 'o', 'ç' => 'c'];
+                $normalized = strtr($normalized, $turkishChars);
+                $normalizedHeaders[$index] = $normalized;
             }
 
             foreach ($rows as $rowIndex => $row) {
@@ -66,7 +71,7 @@ class CustomerBankImport
                         }
                     }
 
-                    // Gerekli alanları kontrol et - önce tüm olası başlık varyasyonlarını dene
+                    // Gerekli alanları kontrol et - Türkçe karakterler normalize edildiği için sadece 'i' versiyonlarını kontrol et
                     $customerName = $this->getValue($rowData, ['firma_adi', 'firma adi', 'firma']);
                     $bankName = $this->getValue($rowData, ['banka_adi', 'banka adi', 'banka']);
                     $email = $this->getValue($rowData, ['e_posta', 'e-posta', 'eposta', 'email', 'e_mail']);
