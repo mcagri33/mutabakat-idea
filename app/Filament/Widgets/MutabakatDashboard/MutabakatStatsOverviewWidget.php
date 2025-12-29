@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Cache;
 
 class MutabakatStatsOverviewWidget extends BaseWidget
 {
-    protected static ?string $pollingInterval = null;
+    // 30 saniyede bir otomatik yenileme
+    protected static ?string $pollingInterval = '30s';
     
     protected static ?int $sort = 1;
 
@@ -18,8 +19,8 @@ class MutabakatStatsOverviewWidget extends BaseWidget
     {
         $currentYear = now()->year;
         
-        // Cache ile optimize edilmiş sorgular - 5 dakika cache
-        return Cache::remember("mutabakat_stats_{$currentYear}", 300, function () use ($currentYear) {
+        // Cache süresini 30 saniyeye düşür (daha hızlı güncelleme)
+        return Cache::remember("mutabakat_stats_{$currentYear}", 30, function () use ($currentYear) {
             // Tek sorguda tüm banka istatistiklerini al (JOIN ile optimize)
             $bankStats = ReconciliationBank::join('reconciliation_requests', 'reconciliation_banks.request_id', '=', 'reconciliation_requests.id')
                 ->whereYear('reconciliation_requests.created_at', $currentYear)
