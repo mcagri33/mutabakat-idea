@@ -64,4 +64,71 @@ class ReconciliationBank extends Model
     {
         return $this->hasMany(ReconciliationIncomingEmail::class, 'bank_id');
     }
+
+    /**
+     * Model boot method - event listener'ları kaydet
+     */
+    protected static function booted()
+    {
+        // Banka durumu güncellendiğinde request status'ünü güncelle
+        static::updated(function ($bank) {
+            if ($bank->isDirty('reply_status')) {
+                $bank->updateRequestStatus();
+            }
+        });
+    }
+
+    /**
+     * Request status'ünü banka durumlarına göre güncelle
+     */
+    public function updateRequestStatus(): void
+    {
+        $request = $this->request;
+        if (!$request) {
+            return;
+        }
+
+        $totalBanks = $request->banks()->count();
+        if ($totalBanks === 0) {
+            return;
+        }
+
+        $pendingBanks = $request->banks()->where('reply_status', 'pending')->count();
+        $receivedBanks = $request->banks()->whereIn('reply_status', ['received', 'completed'])->count();
+        $completedBanks = $request->banks()->where('reply_status', 'completed')->count();
+
+        // Tüm bankalardan cevap geldi
+        if ($receivedBanks === $totalBanks && $totalBanks > 0) {
+            $newStatus = 'received';
+            $updateData = [
+                'status' => $newStatus,
+            ];
+            
+            // received_at henüz set edilmediyse set et
+            if (!$request->received_at) {
+                $updateData['received_at'] = now();
+            }
+            
+            if ($request->status !== $newStatus) {
+                $request->update($updateData);
+            }
+        }
+        // Bazı bankalardan cevap geldi (kısmi)
+        elseif ($receivedBanks > 0 && $pendingBanks > 0) {
+            $newStatus = 'partially';
+            if ($request->status !== $newStatus) {
+                $request->update(['status' => $newStatus]);
+            }
+        }
+        // Henüz hiç cevap gelmedi ama mail gönderildi
+        elseif ($request->status === 'mail_sent' && $pendingBanks === $totalBanks) {
+            // Durum değişmedi, mail_sent kalacak
+            return;
+        }
+        // Henüz mail gönderilmedi
+        elseif ($request->status === 'pending') {
+            // Durum değişmedi, pending kalacak
+            return;
+        }
+    }
 }

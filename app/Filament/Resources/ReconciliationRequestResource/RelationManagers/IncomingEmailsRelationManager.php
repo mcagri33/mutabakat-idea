@@ -140,6 +140,9 @@ class IncomingEmailsRelationManager extends RelationManager
                                 'reply_received_at' => now(),
                             ]);
                             
+                            // Request status'ünü güncelle (observer otomatik çağrılır ama manuel de çağıralım)
+                            $bank->updateRequestStatus();
+                            
                             \Filament\Notifications\Notification::make()
                                 ->title('Mail eşleştirildi')
                                 ->success()

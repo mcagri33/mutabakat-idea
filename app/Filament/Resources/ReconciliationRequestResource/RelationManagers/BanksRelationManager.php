@@ -153,6 +153,9 @@ class BanksRelationManager extends RelationManager
                             'reply_received_at' => now(),
                         ]);
 
+                        // Request status'ünü güncelle (observer otomatik çağrılır ama manuel de çağıralım)
+                        $record->updateRequestStatus();
+
                         \Filament\Notifications\Notification::make()
                             ->title('Durum güncellendi')
                             ->body($record->bank_name . ' bankasından cevap geldi olarak işaretlendi.')

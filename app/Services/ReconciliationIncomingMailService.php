@@ -131,6 +131,9 @@ class ReconciliationIncomingMailService
                 'reply_received_at' => now(),
             ]);
             
+            // Request status'ünü güncelle (observer otomatik çağrılır ama manuel de çağıralım)
+            $bank->updateRequestStatus();
+            
             // Admin'e bildirim gönder
             $this->notifyAdmin($bank, $incomingEmail);
             

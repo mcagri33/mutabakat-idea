@@ -154,6 +154,9 @@ class DocumentsRelationManager extends RelationManager
                                 'reply_status' => 'received',
                                 'reply_received_at' => now(),
                             ]);
+                            
+                            // Request status'ünü güncelle (observer otomatik çağrılır ama manuel de çağıralım)
+                            $bank->updateRequestStatus();
                         }
                     }),
             ])
