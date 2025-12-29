@@ -168,6 +168,18 @@ class ReconciliationMailService
             ]);
 
         } catch (\Exception $e) {
+            // Hata durumunda email log kaydı oluştur
+            ReconciliationEmail::create([
+                'request_id'  => $request->id,
+                'bank_id'     => $bank->id,
+                'sent_to'     => $bank->officer_email,
+                'subject'     => $subject,
+                'body'        => null,
+                'status'      => 'failed',
+                'sent_at'     => now(),
+                'error_message' => $e->getMessage(),
+            ]);
+
             Log::error('Banka mutabakat maili gönderilemedi', [
                 'bank_id' => $bank->id,
                 'error' => $e->getMessage(),

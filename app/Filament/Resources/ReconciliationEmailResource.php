@@ -16,20 +16,58 @@ class ReconciliationEmailResource extends Resource
 {
     protected static ?string $model = ReconciliationEmail::class;
 
-protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
+    protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
     protected static ?string $navigationIcon = 'heroicon-o-envelope-open';
     protected static ?string $label = 'Mail Logları';
     protected static ?string $pluralLabel = 'Mail Logları';
-    protected static ?string $navigationLabel = 'Gönderilen Mailler';
+    protected static ?string $navigationLabel = 'Email Logları';
+    protected static ?int $navigationSort = 5;
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-            Forms\Components\TextInput::make('sent_to')->label('Gönderilen E-posta')->disabled(),
-            Forms\Components\TextInput::make('subject')->label('Başlık')->disabled(),
-            Forms\Components\Textarea::make('body')->label('İçerik')->rows(10)->disabled(),
-            Forms\Components\TextInput::make('status')->label('Durum')->disabled(),
-            Forms\Components\DateTimePicker::make('sent_at')->label('Gönderim Zamanı')->disabled(),
+                Forms\Components\Section::make('Email Bilgileri')
+                    ->schema([
+                        Forms\Components\TextInput::make('sent_to')
+                            ->label('Gönderilen E-posta')
+                            ->email()
+                            ->disabled(),
+                        Forms\Components\TextInput::make('subject')
+                            ->label('Konu')
+                            ->disabled(),
+                        Forms\Components\Textarea::make('body')
+                            ->label('İçerik')
+                            ->rows(10)
+                            ->disabled(),
+                        Forms\Components\Select::make('status')
+                            ->label('Durum')
+                            ->options([
+                                'sent' => 'Gönderildi',
+                                'failed' => 'Başarısız',
+                                'bounced' => 'Geri Döndü',
+                            ])
+                            ->disabled(),
+                        Forms\Components\DateTimePicker::make('sent_at')
+                            ->label('Gönderim Zamanı')
+                            ->disabled(),
+                        Forms\Components\Textarea::make('error_message')
+                            ->label('Hata Mesajı')
+                            ->rows(5)
+                            ->visible(fn ($record) => $record && $record->status === 'failed')
+                            ->disabled(),
+                    ]),
+                Forms\Components\Section::make('İlişkili Kayıtlar')
+                    ->schema([
+                        Forms\Components\Select::make('request_id')
+                            ->label('Mutabakat Talebi')
+                            ->relationship('request', 'id', fn ($query) => $query->with('customer'))
+                            ->disabled(),
+                        Forms\Components\Select::make('bank_id')
+                            ->label('Banka')
+                            ->relationship('bank', 'bank_name')
+                            ->disabled(),
+                    ]),
             ]);
     }
 
@@ -37,42 +75,89 @@ protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable()
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('request.customer.name')
+                    ->label('Müşteri')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('bank.bank_name')
+                    ->label('Banka')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('sent_to')
-                ->label('Gönderilen Kişi')
-                ->searchable(),
+                    ->label('Gönderilen E-posta')
+                    ->searchable()
+                    ->sortable()
+                    ->copyable()
+                    ->icon('heroicon-m-envelope'),
 
-            Tables\Columns\TextColumn::make('subject')
-                ->label('Konu')
-                ->limit(40)
-                ->searchable(),
+                Tables\Columns\TextColumn::make('subject')
+                    ->label('Konu')
+                    ->limit(50)
+                    ->searchable()
+                    ->tooltip(fn ($record) => $record->subject),
 
-            Tables\Columns\TextColumn::make('status')
-                ->label('Durum')
-                ->badge()
-                ->color(fn (string $state): string => match ($state) {
-                    'sent' => 'success',
-                    'failed' => 'danger',
-                    default => 'gray',
-                })
-                ->formatStateUsing(fn (string $state): string => match ($state) {
-                    'sent' => 'Gönderildi',
-                    'failed' => 'Başarısız',
-                    default => $state,
-                }),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Durum')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'sent' => 'success',
+                        'failed' => 'danger',
+                        'bounced' => 'warning',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'sent' => 'Gönderildi',
+                        'failed' => 'Başarısız',
+                        'bounced' => 'Geri Döndü',
+                        default => $state,
+                    })
+                    ->sortable(),
 
-            Tables\Columns\TextColumn::make('sent_at')
-                ->label('Gönderim Tarihi')
-                ->dateTime(),
-            ])        
+                Tables\Columns\TextColumn::make('sent_at')
+                    ->label('Gönderim Tarihi')
+                    ->dateTime('d.m.Y H:i')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('error_message')
+                    ->label('Hata Mesajı')
+                    ->limit(50)
+                    ->tooltip(fn ($record) => $record->error_message)
+                    ->visible(fn ($record) => $record->status === 'failed')
+                    ->color('danger')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Oluşturulma')
+                    ->dateTime('d.m.Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
             ->defaultSort('id', 'desc')
-
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Durum')
                     ->options([
                         'sent' => 'Gönderildi',
                         'failed' => 'Başarısız',
+                        'bounced' => 'Geri Döndü',
                     ]),
+
+                Tables\Filters\SelectFilter::make('request_id')
+                    ->label('Mutabakat Talebi')
+                    ->relationship('request', 'id', fn ($query) => $query->with('customer'))
+                    ->searchable()
+                    ->preload(),
+
                 Tables\Filters\Filter::make('sent_at')
                     ->form([
                         Forms\Components\DatePicker::make('sent_from')
@@ -91,16 +176,21 @@ protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
                                 fn (Builder $query, $date): Builder => $query->whereDate('sent_at', '<=', $date),
                             );
                     }),
+
+                Tables\Filters\Filter::make('has_error')
+                    ->label('Hata Olanlar')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('error_message')),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultPaginationPageOption(25)
+            ->poll('30s');
     }
 
     public static function getRelations(): array
@@ -116,5 +206,15 @@ protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
             'index' => Pages\ListReconciliationEmails::route('/'),
             'view' => Pages\ViewReconciliationEmail::route('/{record}'),
         ];
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::where('status', 'failed')->count() ?: null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'danger';
     }
 }

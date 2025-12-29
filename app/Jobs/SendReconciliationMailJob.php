@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ReconciliationBank;
+use App\Models\ReconciliationEmail;
 use App\Services\ReconciliationMailService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -63,6 +64,23 @@ class SendReconciliationMailJob implements ShouldQueue
             ]);
 
         } catch (\Exception $e) {
+            // Hata durumunda email log kaydı oluştur
+            $request = $this->bank->request;
+            $subject = $request && $this->bank->customer 
+                ? "{$this->bank->customer->name} - {$request->year} Yılı Banka Mutabakatı"
+                : 'Banka Mutabakatı';
+
+            ReconciliationEmail::create([
+                'request_id'  => $request?->id,
+                'bank_id'     => $this->bank->id,
+                'sent_to'     => $this->bank->officer_email,
+                'subject'     => $subject,
+                'body'        => null,
+                'status'      => 'failed',
+                'sent_at'     => now(),
+                'error_message' => $e->getMessage(),
+            ]);
+
             // Hatalı → Logla ve güncelle
             $this->bank->update([
                 'mail_status' => 'failed',
@@ -87,6 +105,23 @@ class SendReconciliationMailJob implements ShouldQueue
         Log::error('Reconciliation mail job kalıcı olarak başarısız', [
             'bank_id' => $this->bank->id,
             'error' => $exception->getMessage(),
+        ]);
+
+        // Son denemede de başarısız olduysa email log kaydı oluştur
+        $request = $this->bank->request;
+        $subject = $request && $this->bank->customer 
+            ? "{$this->bank->customer->name} - {$request->year} Yılı Banka Mutabakatı"
+            : 'Banka Mutabakatı';
+
+        ReconciliationEmail::create([
+            'request_id'  => $request?->id,
+            'bank_id'     => $this->bank->id,
+            'sent_to'     => $this->bank->officer_email,
+            'subject'     => $subject,
+            'body'        => null,
+            'status'      => 'failed',
+            'sent_at'     => now(),
+            'error_message' => $exception->getMessage(),
         ]);
 
         // Son denemede de başarısız olduysa durumu güncelle
