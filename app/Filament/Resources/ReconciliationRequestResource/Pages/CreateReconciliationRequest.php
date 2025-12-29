@@ -68,6 +68,16 @@ class CreateReconciliationRequest extends CreateRecord
             ]);
         }
     }
+
+    // Request status'ünü güncelle
+    // Eğer en az bir mail gönderildiyse status'ü 'mail_sent' yap
+    $sentBanksCount = $request->banks()->where('mail_status', 'sent')->count();
+    if ($sentBanksCount > 0) {
+        $request->update([
+            'status' => 'mail_sent',
+            'sent_at' => now(),
+        ]);
+    }
 }
 
 }
