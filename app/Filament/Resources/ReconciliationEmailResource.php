@@ -104,7 +104,7 @@ class ReconciliationEmailResource extends Resource
                     ->label('Konu')
                     ->limit(50)
                     ->searchable()
-                    ->tooltip(fn ($record) => $record->subject),
+                    ->tooltip(fn ($record) => $record?->subject),
 
                 Tables\Columns\TextColumn::make('status')
                     ->label('Durum')
@@ -132,8 +132,8 @@ class ReconciliationEmailResource extends Resource
                 Tables\Columns\TextColumn::make('error_message')
                     ->label('Hata Mesajı')
                     ->limit(50)
-                    ->tooltip(fn ($record) => $record->error_message)
-                    ->visible(fn ($record) => $record->status === 'failed')
+                    ->tooltip(fn ($record) => $record?->error_message)
+                    ->visible(fn ($record) => $record && $record->status === 'failed')
                     ->color('danger')
                     ->toggleable(),
 
