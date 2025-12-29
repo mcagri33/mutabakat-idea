@@ -74,6 +74,7 @@ class ReconciliationEmailResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['request.customer', 'bank']))
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
@@ -210,7 +211,8 @@ class ReconciliationEmailResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('status', 'failed')->count() ?: null;
+        $count = static::getModel()::where('status', 'failed')->count();
+        return $count > 0 ? (string) $count : null;
     }
 
     public static function getNavigationBadgeColor(): ?string

@@ -98,4 +98,12 @@ class ViewReconciliationEmail extends ViewRecord
                     ->columns(2),
             ]);
     }
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        // Relationship'leri eager load et
+        $this->record->load(['request.customer', 'bank']);
+        
+        return $data;
+    }
 }
