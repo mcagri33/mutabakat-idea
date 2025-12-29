@@ -107,34 +107,14 @@ class BanksRelationManager extends RelationManager
         ->modalSubmitActionLabel('Gönder')
         ->modalCancelActionLabel('İptal')
         ->action(function ($record) {
-            try {
-                // Mail gönderme servisi
-                app(\App\Services\ReconciliationMailService::class)
-                    ->sendBankMail($record);
+            // Queue'ya ekle - asenkron gönderim
+            \App\Jobs\SendReconciliationMailJob::dispatch($record);
 
-                // Mail durumu güncelle
-                $record->update([
-                    'mail_status'  => 'sent',
-                    'mail_sent_at' => now(),
-                ]);
-
-                \Filament\Notifications\Notification::make()
-                    ->title('Mail başarıyla gönderildi')
-                    ->body('Mutabakat maili ' . $record->officer_email . ' adresine gönderildi.')
-                    ->success()
-                    ->send();
-            } catch (\Exception $e) {
-                // Hata durumunda güncelle
-                $record->update([
-                    'mail_status' => 'failed',
-                ]);
-
-                \Filament\Notifications\Notification::make()
-                    ->title('Mail gönderilemedi')
-                    ->body('Hata: ' . $e->getMessage())
-                    ->danger()
-                    ->send();
-            }
+            \Filament\Notifications\Notification::make()
+                ->title('Mail gönderimi başlatıldı')
+                ->body('Mutabakat maili ' . $record->officer_email . ' adresine gönderilmek üzere kuyruğa eklendi. Email arka planda gönderilecek.')
+                ->success()
+                ->send();
         }),
 
                 Tables\Actions\Action::make('markAsReceived')

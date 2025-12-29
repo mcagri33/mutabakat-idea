@@ -21,8 +21,8 @@ class CreateReconciliationRequest extends CreateRecord
         ->where('is_active', true)
         ->get();
 
-    // 2) Her banka için ReconciliationBank kaydı oluştur + Mail gönder
-    $mailService = app(\App\Services\ReconciliationMailService::class);
+    // 2) Her banka için ReconciliationBank kaydı oluştur + Mail gönder (Queue ile)
+    $banksWithEmail = 0;
 
     foreach ($customerBanks as $bank) {
 
@@ -45,38 +45,24 @@ class CreateReconciliationRequest extends CreateRecord
             continue;
         }
 
-        // 3) Mail gönder
-        try {
-            $mailService->sendBankMail($recBank);
-
-            // Başarılı → Güncelle
-            $recBank->update([
-                'mail_status'  => 'sent',
-                'mail_sent_at' => now(),
-            ]);
-
-        } catch (\Throwable $e) {
-
-            // Hatalı → Logla ama sistemi durdurma
-            $recBank->update([
-                'mail_status' => 'failed',
-            ]);
-
-            \Log::error("Mutabakat mail gönderilemedi", [
-                'bank_id' => $recBank->id,
-                'error'   => $e->getMessage(),
-            ]);
-        }
+        // 3) Mail gönderimi için Queue'ya ekle (asenkron)
+        \App\Jobs\SendReconciliationMailJob::dispatch($recBank);
+        $banksWithEmail++;
     }
 
-    // Request status'ünü güncelle
-    // Eğer en az bir mail gönderildiyse status'ü 'mail_sent' yap
-    $sentBanksCount = $request->banks()->where('mail_status', 'sent')->count();
-    if ($sentBanksCount > 0) {
-        $request->update([
-            'status' => 'mail_sent',
-            'sent_at' => now(),
-        ]);
+    // Kullanıcıya bildirim göster
+    if ($banksWithEmail > 0) {
+        \Filament\Notifications\Notification::make()
+            ->title('Mutabakat talebi oluşturuldu')
+            ->body("{$banksWithEmail} bankaya email gönderimi başlatıldı. Email'ler arka planda gönderilecek.")
+            ->success()
+            ->send();
+    } else {
+        \Filament\Notifications\Notification::make()
+            ->title('Mutabakat talebi oluşturuldu')
+            ->body('Banka kayıtları oluşturuldu ancak email adresi olan banka bulunamadı.')
+            ->warning()
+            ->send();
     }
 }
 
