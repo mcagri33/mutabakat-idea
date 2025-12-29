@@ -136,6 +136,29 @@ class BanksRelationManager extends RelationManager
                     ->send();
             }
         }),
+
+                Tables\Actions\Action::make('markAsReceived')
+                    ->label('Cevap Geldi Olarak İşaretle')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->reply_status === 'pending')
+                    ->requiresConfirmation()
+                    ->modalHeading('Cevap Geldi Olarak İşaretle')
+                    ->modalDescription('Bu bankadan cevap geldi olarak işaretlenecek. Belge yüklü değilse sonradan "Gelen Belgeler" sekmesinden ekleyebilirsiniz.')
+                    ->modalSubmitActionLabel('İşaretle')
+                    ->modalCancelActionLabel('İptal')
+                    ->action(function ($record) {
+                        $record->update([
+                            'reply_status' => 'received',
+                            'reply_received_at' => now(),
+                        ]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Durum güncellendi')
+                            ->body($record->bank_name . ' bankasından cevap geldi olarak işaretlendi.')
+                            ->success()
+                            ->send();
+                    }),
             ])
 
             ->bulkActions([]);
