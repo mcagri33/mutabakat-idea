@@ -72,7 +72,8 @@ class ReconciliationMailService
             }
             
             \Mail::send('emails.bank-reconciliation', $bodyViewData, function ($message) use ($bank, $customer, $subject, $pdfPath, $ccAddresses, $request) {
-                $message->to($bank->officer_email)
+                $message->from('mutabakat@mg.ideadocs.com.tr', 'Mutabakat Yönetim Sistemi')
+                    ->to($bank->officer_email)
                     ->cc($ccAddresses)
                     ->subject($subject)
                     ->attach($pdfPath, [
