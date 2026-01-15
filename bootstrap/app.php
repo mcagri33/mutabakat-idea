@@ -11,7 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Mailgun webhook'u CSRF korumasından muaf tut
+        $middleware->validateCsrfTokens(except: [
+            'webhook/mailgun/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

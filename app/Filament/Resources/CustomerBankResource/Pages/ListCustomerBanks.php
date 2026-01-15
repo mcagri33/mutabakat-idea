@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CustomerBankResource\Pages;
 use App\Filament\Resources\CustomerBankResource;
 use App\Models\Customer;
 use App\Imports\CustomerBankImport;
+use App\Exports\CustomerBankExport;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Pages\ListRecords;
@@ -178,6 +179,17 @@ class ListCustomerBanks extends ListRecords
                 ->requiresConfirmation()
                 ->modalHeading('Excel Dosyası İçe Aktar')
                 ->modalDescription('Excel dosyasındaki banka bilgilerini sisteme aktarın. Her satır için yeni bir kayıt oluşturulur.'),
+            Actions\Action::make('export')
+                ->label('Excel\'e Aktar')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->action(function () {
+                    $banks = \App\Models\CustomerBank::with('customer')
+                        ->get();
+                    
+                    $export = new CustomerBankExport($banks);
+                    return $export->export();
+                }),
             Actions\CreateAction::make(),
         ];
     }

@@ -74,3 +74,7 @@ Route::get('/sync-customers', function () {
         return "Error: " . $e->getMessage() . "<br>Trace: " . $e->getTraceAsString();
     }
 });
+
+// Mailgun webhook (CSRF koruması olmadan)
+Route::post('/webhook/mailgun/incoming', [\App\Http\Controllers\MailgunWebhookController::class, 'handleIncomingMail'])
+    ->middleware('throttle:60,1'); // Rate limiting
