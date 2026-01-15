@@ -7,14 +7,12 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Mailgun webhook'u CSRF korumasından muaf tut
-        $middleware->validateCsrfTokens(except: [
-            'webhook/mailgun/*',
-        ]);
+        // API route'ları zaten CSRF'den muaf, ekstra bir şey yapmaya gerek yok
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

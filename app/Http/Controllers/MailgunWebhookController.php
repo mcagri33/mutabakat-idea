@@ -18,7 +18,7 @@ class MailgunWebhookController extends Controller
 
     /**
      * Mailgun'den gelen mail webhook'u
-     * POST /webhook/mailgun/incoming
+     * POST /api/webhook/mailgun/incoming
      */
     public function handleIncomingMail(Request $request)
     {
