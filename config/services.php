@@ -39,7 +39,8 @@ return [
 
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
-        'secret' => env('MAILGUN_SECRET'),
+        'secret' => env('MAILGUN_SECRET'), // API Key (mail göndermek için)
+        'webhook_signing_key' => env('MAILGUN_WEBHOOK_SIGNING_KEY'), // HTTP Webhook Signing Key
         'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
     ],
 

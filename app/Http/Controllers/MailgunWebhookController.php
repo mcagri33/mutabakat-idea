@@ -81,9 +81,10 @@ class MailgunWebhookController extends Controller
      */
     protected function verifySignature(Request $request): bool
     {
-        $apiKey = config('services.mailgun.secret');
-        if (!$apiKey) {
-            Log::warning('Mailgun API key yapılandırılmamış');
+        // HTTP Webhook Signing Key kullan (API Key değil!)
+        $webhookSigningKey = config('services.mailgun.webhook_signing_key');
+        if (!$webhookSigningKey) {
+            Log::warning('Mailgun HTTP Webhook Signing Key yapılandırılmamış');
             return false;
         }
 
@@ -96,7 +97,8 @@ class MailgunWebhookController extends Controller
         }
 
         // Mailgun signature doğrulama algoritması
-        $hmac = hash_hmac('sha256', $timestamp . $token, $apiKey);
+        // HTTP Webhook Signing Key ile doğrula
+        $hmac = hash_hmac('sha256', $timestamp . $token, $webhookSigningKey);
         
         return hash_equals($signature, $hmac) && 
                abs(time() - $timestamp) < 15; // 15 saniye içinde olmalı
