@@ -23,12 +23,32 @@ class MailgunWebhookController extends Controller
     public function handleIncomingMail(Request $request)
     {
         try {
-            // Mailgun signature doğrulama
-            if (!$this->verifySignature($request)) {
-                Log::warning('Mailgun webhook signature doğrulaması başarısız', [
+            // DEBUG: Tüm gelen verileri logla
+            Log::info('Mailgun webhook alındı', [
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'ip' => $request->ip(),
+                'content_type' => $request->header('Content-Type'),
+                'all_input_keys' => array_keys($request->all()),
+                'all_inputs' => $request->all(),
+            ]);
+
+            // Geçici test modu (sadece development için)
+            $skipSignature = env('MAILGUN_SKIP_SIGNATURE', false);
+            
+            if (!$skipSignature) {
+                // Mailgun signature doğrulama
+                if (!$this->verifySignature($request)) {
+                    Log::warning('Mailgun webhook signature doğrulaması başarısız', [
+                        'ip' => $request->ip(),
+                        'all_inputs' => $request->all(),
+                    ]);
+                    return response('Unauthorized', 401);
+                }
+            } else {
+                Log::warning('Mailgun signature doğrulaması atlandı (DEBUG MODE - SADECE TEST İÇİN!)', [
                     'ip' => $request->ip(),
                 ]);
-                return response('Unauthorized', 401);
             }
 
             // Mailgun'den gelen veriler
@@ -84,7 +104,9 @@ class MailgunWebhookController extends Controller
         // HTTP Webhook Signing Key kullan (API Key değil!)
         $webhookSigningKey = config('services.mailgun.webhook_signing_key');
         if (!$webhookSigningKey) {
-            Log::warning('Mailgun HTTP Webhook Signing Key yapılandırılmamış');
+            Log::warning('Mailgun HTTP Webhook Signing Key yapılandırılmamış', [
+                'config_exists' => config('services.mailgun') !== null,
+            ]);
             return false;
         }
 
@@ -92,7 +114,26 @@ class MailgunWebhookController extends Controller
         $timestamp = $request->input('timestamp');
         $token = $request->input('token');
 
+        // Debug: Gelen verileri logla
+        Log::info('Mailgun webhook signature doğrulama başladı', [
+            'has_signature' => !empty($signature),
+            'has_timestamp' => !empty($timestamp),
+            'has_token' => !empty($token),
+            'timestamp' => $timestamp,
+            'current_time' => time(),
+            'time_diff' => $timestamp ? abs(time() - $timestamp) : null,
+            'all_input_keys' => array_keys($request->all()),
+            'request_method' => $request->method(),
+            'content_type' => $request->header('Content-Type'),
+        ]);
+
         if (!$signature || !$timestamp || !$token) {
+            Log::warning('Mailgun webhook: Eksik signature parametreleri', [
+                'signature' => $signature ? 'exists (' . strlen($signature) . ' chars)' : 'missing',
+                'timestamp' => $timestamp ? 'exists (' . $timestamp . ')' : 'missing',
+                'token' => $token ? 'exists (' . strlen($token) . ' chars)' : 'missing',
+                'all_inputs' => $request->all(), // Tüm gelen verileri logla
+            ]);
             return false;
         }
 
@@ -100,8 +141,36 @@ class MailgunWebhookController extends Controller
         // HTTP Webhook Signing Key ile doğrula
         $hmac = hash_hmac('sha256', $timestamp . $token, $webhookSigningKey);
         
-        return hash_equals($signature, $hmac) && 
-               abs(time() - $timestamp) < 15; // 15 saniye içinde olmalı
+        $signatureValid = hash_equals($signature, $hmac);
+        $timestampValid = abs(time() - $timestamp) < 15; // 15 saniye içinde olmalı
+        
+        Log::info('Mailgun signature doğrulama sonucu', [
+            'signature_valid' => $signatureValid,
+            'timestamp_valid' => $timestampValid,
+            'expected_hmac' => $hmac,
+            'received_signature' => $signature,
+            'hmac_match' => $signatureValid,
+            'timestamp_diff' => abs(time() - $timestamp),
+        ]);
+        
+        if (!$signatureValid) {
+            Log::warning('Mailgun signature eşleşmedi', [
+                'expected' => $hmac,
+                'received' => $signature,
+                'webhook_key_length' => strlen($webhookSigningKey),
+                'webhook_key_set' => !empty($webhookSigningKey),
+            ]);
+        }
+        
+        if (!$timestampValid) {
+            Log::warning('Mailgun timestamp geçersiz', [
+                'timestamp' => $timestamp,
+                'current_time' => time(),
+                'diff' => abs(time() - $timestamp),
+            ]);
+        }
+        
+        return $signatureValid && $timestampValid;
     }
 
     /**
