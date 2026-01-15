@@ -64,11 +64,39 @@ class ReconciliationMailService
             );
 
             // Mail gönder - PDF ekle (DOCX yerine)
-            // CC adresleri: mutabakat@ideadenetim.com.tr + müşteri email'i (varsa)
-            $ccAddresses = ['mutabakat@ideadenetim.com.tr'];
+            // CC adresleri başlangıçta boş
+            $ccAddresses = [];
             
-            if ($customer->email) {
-                $ccAddresses[] = $customer->email;
+            // Otomatik CC email'lerini ekle (eğer isteniyorsa)
+            if ($request->include_auto_cc ?? true) {
+                $ccAddresses[] = 'mutabakat@ideadenetim.com.tr';
+                
+                if ($customer->email) {
+                    $ccAddresses[] = $customer->email;
+                }
+            }
+            
+            // Kullanıcı tarafından girilen CC email'lerini parse et ve ekle
+            if ($request->cc_emails) {
+                // Virgül, noktalı virgül veya yeni satır ile ayrılmış email'leri parse et
+                $customEmails = preg_split('/[,;\n\r]+/', $request->cc_emails);
+                
+                foreach ($customEmails as $email) {
+                    $email = trim($email);
+                    
+                    // Email formatını kontrol et ve boş değilse ekle
+                    if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        // Aynı email zaten listede yoksa ekle
+                        if (!in_array($email, $ccAddresses)) {
+                            $ccAddresses[] = $email;
+                        }
+                    }
+                }
+            }
+            
+            // Eğer hiç CC email yoksa, en azından mutabakat@ideadenetim.com.tr'yi ekle (güvenlik için)
+            if (empty($ccAddresses)) {
+                $ccAddresses = ['mutabakat@ideadenetim.com.tr'];
             }
             
             \Mail::send('emails.bank-reconciliation', $bodyViewData, function ($message) use ($bank, $customer, $subject, $pdfPath, $ccAddresses, $request) {

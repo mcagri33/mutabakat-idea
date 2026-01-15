@@ -17,6 +17,8 @@ class ReconciliationRequest extends Model
         'received_at',
         'notes',
         'attachments',
+        'cc_emails',
+        'include_auto_cc',
     ];
 
     protected $casts = [
@@ -24,6 +26,7 @@ class ReconciliationRequest extends Model
         'sent_at'      => 'datetime',
         'received_at'  => 'datetime',
         'attachments'  => 'array',
+        'include_auto_cc' => 'boolean',
     ];
 
     /** Firma ilişkisi */

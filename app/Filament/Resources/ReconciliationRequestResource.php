@@ -79,6 +79,25 @@ class ReconciliationRequestResource extends Resource
                     ->helperText('Mutabakat talebi ile ilgili ek notlar (maksimum 1000 karakter)')
                     ->columnSpanFull(),
 
+                Forms\Components\Section::make('CC Email Ayarları')
+                    ->schema([
+                        Forms\Components\Toggle::make('include_auto_cc')
+                            ->label('Otomatik CC Email\'lerini Dahil Et')
+                            ->default(true)
+                            ->helperText('İşaretliyse: mutabakat@ideadenetim.com.tr ve müşteri email\'i otomatik olarak CC\'ye eklenir.')
+                            ->columnSpanFull(),
+
+                        Forms\Components\Textarea::make('cc_emails')
+                            ->label('Ek CC Email Adresleri')
+                            ->rows(3)
+                            ->placeholder('email1@example.com, email2@example.com')
+                            ->helperText('Mail gönderiminde CC olarak eklenecek ek email adresleri. Virgülle ayırarak birden fazla email ekleyebilirsiniz.')
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible()
+                    ->collapsed()
+                    ->columnSpanFull(),
+
                 Forms\Components\Section::make('Ek Dosyalar')
                     ->schema([
                         Forms\Components\FileUpload::make('attachments')
