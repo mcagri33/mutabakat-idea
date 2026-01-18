@@ -13,14 +13,16 @@
     </div>
 
     <!-- Hitap -->
-    <p>SAYIN; {{ $bank->officer_name ?? '.....' }}</p>
+    <p>Sayın Banka Yetkilisi</p>
 
     <!-- Ana paragraf -->
     <p style="line-height: 1.6;">
         Bankanız nezdindeki <strong>{{ $customer->name }}</strong> şirketinin hesaplara ilişkin
         (aşağıda listelenen detayda, kaşe ve imzalı olarak)
         <strong>{{ $request->year }} YILI 31.12.{{ $request->year }}</strong> tarihi itibari kayıtlarımızda görünen
-        bilgilerin ve hesap bakiyelerinin 7 (yedi) gün içerisinde tarafımıza iletilmesini rica ederiz.
+        bilgilerin ve hesap bakiyelerinin uygun gördüğünüz en kısa zamanda tarafımıza iletilmesini rica ederiz.
+        <br>
+        Saygılarımızla.
     </p>
 
     <hr style="margin: 30px 0;">
