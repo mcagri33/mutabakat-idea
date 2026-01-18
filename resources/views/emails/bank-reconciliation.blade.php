@@ -25,8 +25,6 @@
         Saygılarımızla.
     </p>
 
-    <hr style="margin: 30px 0;">
-
     <!-- Alt bölüm -->
     <p style="font-weight: bold;">Bağımsız Denetim Şirketi Bilgileri;</p>
 
@@ -42,6 +40,8 @@
         <strong>KGK Sicil No:</strong> BDK/2015/100<br>
         <strong>Adres:</strong> Ata Bulvarı 23 Nisan Mh. 241 Sk. Meriç Plaza No: 22 Kat 1/1 Nilüfer / Bursa<br>
         <strong>E-Mail:</strong> mutabakat@ideadenetim.com.tr
+        <strong>Telefon:</strong> 0507 508 2094
+
     </p>
 
     <hr style="margin-top: 30px;">
