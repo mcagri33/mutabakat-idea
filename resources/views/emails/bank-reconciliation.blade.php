@@ -39,7 +39,7 @@
         <strong>İdea Bağımsız Denetim Anonim Şirketi</strong><br>
         <strong>KGK Sicil No:</strong> BDK/2015/100<br>
         <strong>Adres:</strong> Ata Bulvarı 23 Nisan Mh. 241 Sk. Meriç Plaza No: 22 Kat 1/1 Nilüfer / Bursa<br>
-        <strong>E-Mail:</strong> mutabakat@ideadenetim.com.tr
+        <strong>E-Mail:</strong> mutabakat@ideadenetim.com.tr<br>
         <strong>Telefon:</strong> 0507 508 2094
 
     </p>
