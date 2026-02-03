@@ -75,27 +75,13 @@ class ReconciliationIncomingMailService
                 ->first();
             
             if (!$bank) {
-                // Eşleşme bulunamadı - logla
-                ReconciliationIncomingEmail::create([
-                    'request_id' => null,
-                    'bank_id' => null,
+                // Eşleşme bulunamadı (bounce, bilinmeyen gönderen vb.) - sadece logla, kayıt oluşturma (request_id NOT NULL)
+                Log::info('Eşleşmeyen mail atlandı (kayıt oluşturulmaz)', [
                     'from_email' => $fromEmail,
                     'from_name' => $fromName,
                     'subject' => $subject,
-                    'body' => $body,
-                    'html_body' => $htmlBody,
                     'message_id' => $messageId,
-                    'received_at' => $receivedAt,
-                    'match_status' => 'unmatched',
-                    'match_notes' => 'Banka eşleştirmesi bulunamadı',
-                    'status' => 'new',
                 ]);
-                
-                Log::info('Eşleşmeyen mail kaydedildi', [
-                    'from_email' => $fromEmail,
-                    'subject' => $subject,
-                ]);
-                
                 return;
             }
             
