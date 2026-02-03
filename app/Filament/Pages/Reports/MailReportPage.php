@@ -38,6 +38,7 @@ class MailReportPage extends Page implements HasForms
 
     public function mount(MutabakatReportService $reportService): void
     {
+        $this->banksPaginator = new LengthAwarePaginatorConcrete([], 0, 15, 1);
         try {
             $this->filters['year'] = $this->filters['year'] ?? now()->year;
             $this->form->fill($this->filters);

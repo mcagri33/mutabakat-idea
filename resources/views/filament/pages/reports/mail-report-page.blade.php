@@ -57,27 +57,21 @@
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $bank->mail_sent_at?->format('d.m.Y H:i') ?? '-' }}</td>
                                         <td class="fi-table-cell px-4 py-3 whitespace-nowrap">
                                             @php
-                                                $mailLabel = match($bank->mail_status) {
-                                                    'sent' => 'Gönderildi',
-                                                    'failed' => 'Hata',
-                                                    default => 'Beklemede',
-                                                };
-                                                $mailColor = match($bank->mail_status) {
-                                                    'sent' => 'success',
-                                                    'failed' => 'danger',
-                                                    default => 'gray',
-                                                };
+                                                $mailStatus = $bank->mail_status ?? 'pending';
+                                                $mailLabels = ['sent' => 'Gönderildi', 'failed' => 'Hata', 'pending' => 'Beklemede'];
+                                                $mailColors = ['sent' => 'success', 'failed' => 'danger', 'pending' => 'gray'];
+                                                $mailLabel = $mailLabels[$mailStatus] ?? 'Beklemede';
+                                                $mailColor = $mailColors[$mailStatus] ?? 'gray';
                                             @endphp
                                             <x-filament::badge :color="$mailColor" size="sm">{{ $mailLabel }}</x-filament::badge>
                                         </td>
                                         <td class="fi-table-cell px-4 py-3 whitespace-nowrap">
                                             @php
-                                                $replyLabel = match($bank->reply_status) {
-                                                    'received' => 'Geldi',
-                                                    'completed' => 'Tamamlandı',
-                                                    default => 'Beklemede',
-                                                };
-                                                $replyColor = in_array($bank->reply_status, ['received', 'completed']) ? 'success' : 'gray';
+                                                $replyStatus = $bank->reply_status ?? 'pending';
+                                                $replyLabels = ['received' => 'Geldi', 'completed' => 'Tamamlandı', 'pending' => 'Beklemede'];
+                                                $replyColors = ['received' => 'success', 'completed' => 'success', 'pending' => 'gray'];
+                                                $replyLabel = $replyLabels[$replyStatus] ?? 'Beklemede';
+                                                $replyColor = $replyColors[$replyStatus] ?? 'gray';
                                             @endphp
                                             <x-filament::badge :color="$replyColor" size="sm">{{ $replyLabel }}</x-filament::badge>
                                         </td>
@@ -109,25 +103,17 @@
                     @if($banksPaginator->hasPages())
                         <nav class="flex items-center gap-1">
                             @if($banksPaginator->onFirstPage())
-                                <span class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2 opacity-50 cursor-not-allowed">
-                                    <x-heroicon-o-chevron-left class="w-5 h-5" />
-                                </span>
+                                <span class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2 opacity-50 cursor-not-allowed" aria-hidden="true">‹</span>
                             @else
-                                <button type="button" wire:click="setPage({{ $banksPaginator->currentPage() - 1 }})" class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2">
-                                    <x-heroicon-o-chevron-left class="w-5 h-5" />
-                                </button>
+                                <button type="button" wire:click="setPage({{ $banksPaginator->currentPage() - 1 }})" class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2">‹ Önceki</button>
                             @endif
                             <span class="fi-table-cell px-2 py-1 text-sm text-gray-600 dark:text-gray-400">
-                                Sayfa {{ $banksPaginator->currentPage() }} / {{ $banksPaginator->lastPage() }}
+                                Sayfa {{ $banksPaginator->currentPage() }} / {{ max(1, $banksPaginator->lastPage()) }}
                             </span>
                             @if($banksPaginator->hasMorePages())
-                                <button type="button" wire:click="setPage({{ $banksPaginator->currentPage() + 1 }})" class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2">
-                                    <x-heroicon-o-chevron-right class="w-5 h-5" />
-                                </button>
+                                <button type="button" wire:click="setPage({{ $banksPaginator->currentPage() + 1 }})" class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2">Sonraki ›</button>
                             @else
-                                <span class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2 opacity-50 cursor-not-allowed">
-                                    <x-heroicon-o-chevron-right class="w-5 h-5" />
-                                </span>
+                                <span class="fi-btn relative grid-flow-dense fi-size-sm fi-btn-color-gray fi-style-outline inline-grid items-center justify-center font-semibold outline-none transition duration-75 focus:ring-2 rounded-lg fi-btn-icon px-2 py-2 opacity-50 cursor-not-allowed" aria-hidden="true">›</span>
                             @endif
                         </nav>
                     @endif
