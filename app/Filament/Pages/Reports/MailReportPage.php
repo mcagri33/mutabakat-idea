@@ -10,6 +10,8 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator as LengthAwarePaginatorConcrete;
+use Illuminate\Support\Facades\Log;
 
 class MailReportPage extends Page implements HasForms
 {
@@ -36,9 +38,17 @@ class MailReportPage extends Page implements HasForms
 
     public function mount(MutabakatReportService $reportService): void
     {
-        $this->filters['year'] = $this->filters['year'] ?? now()->year;
-        $this->form->fill($this->filters);
-        $this->loadData($reportService);
+        try {
+            $this->filters['year'] = $this->filters['year'] ?? now()->year;
+            $this->form->fill($this->filters);
+            $this->loadData($reportService);
+        } catch (\Throwable $e) {
+            Log::error('MailReportPage mount hatası', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $this->banksPaginator = new LengthAwarePaginatorConcrete([], 0, max(1, $this->perPage), 1);
+        }
     }
 
     protected function getForms(): array
@@ -56,19 +66,31 @@ class MailReportPage extends Page implements HasForms
                             ->schema([
                                 Select::make('customer_id')
                                     ->label('Firma')
-                                    ->options(Customer::query()->orderBy('name')->pluck('name', 'id'))
+                                    ->options(function () {
+                                        try {
+                                            return Customer::query()->orderBy('name')->pluck('name', 'id')->toArray();
+                                        } catch (\Throwable $e) {
+                                            Log::warning('MailReportPage: Firma listesi alınamadı', ['error' => $e->getMessage()]);
+                                            return [];
+                                        }
+                                    })
                                     ->searchable()
                                     ->preload()
                                     ->placeholder('Tümü'),
                                 Select::make('year')
                                     ->label('Yıl')
                                     ->options(function () {
-                                        $years = \App\Models\ReconciliationRequest::query()
-                                            ->select('year')
-                                            ->distinct()
-                                            ->orderByDesc('year')
-                                            ->pluck('year', 'year');
-                                        return $years->isEmpty() ? [now()->year => now()->year] : $years->toArray();
+                                        try {
+                                            $years = \App\Models\ReconciliationRequest::query()
+                                                ->select('year')
+                                                ->distinct()
+                                                ->orderByDesc('year')
+                                                ->pluck('year', 'year');
+                                            return $years->isEmpty() ? [now()->year => now()->year] : $years->toArray();
+                                        } catch (\Throwable $e) {
+                                            Log::warning('MailReportPage: Yıl listesi alınamadı', ['error' => $e->getMessage()]);
+                                            return [now()->year => now()->year];
+                                        }
                                     })
                                     ->placeholder('Tümü'),
                                 Select::make('mail_status')
@@ -123,11 +145,21 @@ class MailReportPage extends Page implements HasForms
 
     public function loadData(MutabakatReportService $reportService): void
     {
-        $this->banksPaginator = $reportService->getMailReportBanksPaginated(
-            $this->filters,
-            $this->perPage,
-            $this->page
-        );
+        try {
+            $perPage = max(1, min(100, $this->perPage));
+            $page = max(1, $this->page);
+            $this->banksPaginator = $reportService->getMailReportBanksPaginated(
+                $this->filters,
+                $perPage,
+                $page
+            );
+        } catch (\Throwable $e) {
+            Log::error('MailReportPage loadData hatası', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $this->banksPaginator = new LengthAwarePaginatorConcrete([], 0, max(1, $this->perPage), 1);
+        }
     }
 
     public function setPage(int $page): void
