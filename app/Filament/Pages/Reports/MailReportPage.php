@@ -155,22 +155,13 @@ class MailReportPage extends Page implements HasForms
         try {
             $perPage = max(1, min(100, $this->perPage));
             $page = max(1, $this->page);
-            $paginator = $reportService->getMailReportBanksPaginated(
+            $paginator = $reportService->getMergedMailReportPaginated(
                 $this->filters,
                 $perPage,
                 $page
             );
-            $this->tableRows = collect($paginator->items())->map(function ($bank) {
-                return [
-                    'customer_name' => $bank->customer?->name ?? '-',
-                    'bank_name' => $bank->bank_name ?? '-',
-                    'year' => $bank->request?->year ?? '-',
-                    'mail_sent_at' => $bank->mail_sent_at ? $bank->mail_sent_at->format('d.m.Y H:i') : '-',
-                    'mail_status' => $bank->mail_status ?? 'pending',
-                    'reply_status' => $bank->reply_status ?? 'pending',
-                    'reply_received_at' => $bank->reply_received_at ? $bank->reply_received_at->format('d.m.Y H:i') : '-',
-                ];
-            })->values()->all();
+            $items = $paginator->items();
+            $this->tableRows = is_array($items) ? $items : collect($items)->all();
             $this->totalCount = (int) $paginator->total();
             $this->currentPage = (int) $paginator->currentPage();
             $this->lastPage = max(1, (int) $paginator->lastPage());
@@ -211,18 +202,9 @@ class MailReportPage extends Page implements HasForms
                 ->color('success')
                 ->action(function (): StreamedResponse {
                     $reportService = app(MutabakatReportService::class);
-                    $paginator = $reportService->getMailReportBanksPaginated($this->filters, 50000, 1);
-                    $rows = collect($paginator->items())->map(function ($bank) {
-                        return [
-                            'customer_name' => $bank->customer?->name ?? '-',
-                            'bank_name' => $bank->bank_name ?? '-',
-                            'year' => $bank->request?->year ?? '-',
-                            'mail_sent_at' => $bank->mail_sent_at ? $bank->mail_sent_at->format('d.m.Y H:i') : '-',
-                            'mail_status' => $bank->mail_status ?? 'pending',
-                            'reply_status' => $bank->reply_status ?? 'pending',
-                            'reply_received_at' => $bank->reply_received_at ? $bank->reply_received_at->format('d.m.Y H:i') : '-',
-                        ];
-                    })->values()->all();
+                    $paginator = $reportService->getMergedMailReportPaginated($this->filters, 50000, 1);
+                    $items = $paginator->items();
+                    $rows = is_array($items) ? $items : collect($items)->all();
                     return (new MailReportExport($rows))->export();
                 }),
         ];

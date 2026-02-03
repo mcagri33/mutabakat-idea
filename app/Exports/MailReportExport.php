@@ -35,6 +35,7 @@ class MailReportExport
             'Mail Durumu',
             'Cevap Durumu',
             'Cevap Tarihi',
+            'Kaynak',
         ];
         $sheet->fromArray([$headings], null, 'A1');
 
@@ -49,12 +50,13 @@ class MailReportExport
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:H1')->applyFromArray($headerStyle);
 
         $row = 2;
         foreach ($this->rows as $r) {
             $mailStatus = $r['mail_status'] ?? 'pending';
             $replyStatus = $r['reply_status'] ?? 'pending';
+            $source = ($r['source'] ?? 'sistem') === 'manuel' ? 'Manuel' : 'Sistem';
             $sheet->setCellValue('A' . $row, $r['customer_name'] ?? '-');
             $sheet->setCellValue('B' . $row, $r['bank_name'] ?? '-');
             $sheet->setCellValue('C' . $row, $r['year'] ?? '-');
@@ -62,6 +64,7 @@ class MailReportExport
             $sheet->setCellValue('E' . $row, $mailLabels[$mailStatus] ?? $mailStatus);
             $sheet->setCellValue('F' . $row, $replyLabels[$replyStatus] ?? $replyStatus);
             $sheet->setCellValue('G' . $row, $r['reply_received_at'] ?? '-');
+            $sheet->setCellValue('H' . $row, $source);
             $row++;
         }
 
@@ -72,6 +75,7 @@ class MailReportExport
         $sheet->getColumnDimension('E')->setWidth(14);
         $sheet->getColumnDimension('F')->setWidth(14);
         $sheet->getColumnDimension('G')->setWidth(18);
+        $sheet->getColumnDimension('H')->setWidth(10);
 
         $filename = 'firma_banka_mail_raporu_' . now()->format('Y-m-d_His') . '.xlsx';
         $writer = new Xlsx($spreadsheet);

@@ -42,6 +42,7 @@
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Mail Durumu</th>
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cevap Durumu</th>
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cevap Tarihi</th>
+                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Kaynak</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
@@ -73,11 +74,17 @@
                                             <x-filament::badge :color="$replyColor" size="sm">{{ $replyLabel }}</x-filament::badge>
                                         </td>
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $row['reply_received_at'] ?? '-' }}</td>
+                                        <td class="fi-table-cell px-4 py-3 whitespace-nowrap">
+                                            @php $src = $row['source'] ?? 'sistem'; @endphp
+                                            <x-filament::badge :color="$src === 'manuel' ? 'warning' : 'primary'" size="sm">
+                                                {{ $src === 'manuel' ? 'Manuel' : 'Sistem' }}
+                                            </x-filament::badge>
+                                        </td>
                                     </tr>
                                 @endforeach
                             @else
                                 <tr>
-                                    <td colspan="7" class="fi-table-cell px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    <td colspan="8" class="fi-table-cell px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                         Henüz mail kaydı bulunmuyor veya filtreye uygun kayıt yok.
                                     </td>
                                 </tr>
