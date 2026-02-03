@@ -153,4 +153,68 @@ class MutabakatReportService
             'pageName' => 'page',
         ]);
     }
+
+    /**
+     * Firma gönderim durumu raporu (yıl bazlı, manuel dahil).
+     * Her firma için: banka sayısı, sistemden gönderilen, manuel giriş sayısı, durum.
+     *
+     * @return LengthAwarePaginator<array<string, mixed>>
+     */
+    public function getFirmSendingStatusPaginated(int $year, int $perPage = 15, int $page = 1): LengthAwarePaginator
+    {
+        $customers = Customer::query()
+            ->where('is_active', true)
+            ->withCount('banks')
+            ->orderBy('name')
+            ->get();
+
+        $sentCounts = ReconciliationBank::query()
+            ->whereHas('request', fn ($q) => $q->where('year', $year))
+            ->where('mail_status', 'sent')
+            ->selectRaw('customer_id, count(*) as c')
+            ->groupBy('customer_id')
+            ->pluck('c', 'customer_id');
+
+        $manualCounts = ManualReconciliationEntry::query()
+            ->where('year', $year)
+            ->selectRaw('customer_id, count(*) as c')
+            ->groupBy('customer_id')
+            ->pluck('c', 'customer_id');
+
+        $rows = $customers->map(function ($customer) use ($year, $sentCounts, $manualCounts) {
+            $bankCount = (int) $customer->banks_count;
+            $sentCount = (int) ($sentCounts[$customer->id] ?? 0);
+            $manualCount = (int) ($manualCounts[$customer->id] ?? 0);
+
+            if ($manualCount > 0) {
+                $status = 'manuel_ile';
+            } elseif ($bankCount === 0) {
+                $status = 'banka_eklenmemis';
+            } elseif ($sentCount >= $bankCount) {
+                $status = 'hepsi_gonderildi';
+            } elseif ($sentCount > 0) {
+                $status = 'kismen';
+            } else {
+                $status = 'gonderilmedi';
+            }
+
+            return [
+                'customer_id'   => $customer->id,
+                'customer_name' => $customer->name,
+                'year'          => $year,
+                'bank_count'    => $bankCount,
+                'sent_count'    => $sentCount,
+                'manual_count'  => $manualCount,
+                'status'        => $status,
+            ];
+        })->values();
+
+        $total = $rows->count();
+        $slice = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginatorConcrete($slice->all(), $total, $perPage, $page, [
+            'path' => request()->url(),
+            'pageName' => 'page',
+        ]);
+    }
 }
