@@ -224,8 +224,8 @@ class ReconciliationRequestResource extends Resource
                     ->form([
                         Forms\Components\TextInput::make('year')
                             ->label('Yıl')
-                            ->numeric()
-                            ->default(now()->year),
+                            ->numeric(),
+                            
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
