@@ -1,13 +1,13 @@
 <x-filament-panels::page>
-    <div class="space-y-6 w-full max-w-full min-w-0">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full max-w-full min-w-0">
+    <div class="space-y-6 w-full min-w-0 overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full min-w-0">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Firma – Banka Bazlı Mail Raporu</h3>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gönderilen mutabakat mailleri, gönderim tarihi ve cevap durumu.</p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div class="overflow-x-auto w-full min-w-0" style="-webkit-overflow-scrolling: touch;">
+                <table class="w-full divide-y divide-gray-200 dark:divide-gray-700" style="min-width: max-content;">
                     <thead class="bg-gray-50 dark:bg-gray-900">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Firma</th>
