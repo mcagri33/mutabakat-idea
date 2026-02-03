@@ -9,8 +9,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\LengthAwarePaginator as LengthAwarePaginatorConcrete;
 use Illuminate\Support\Facades\Log;
 
 class MailReportPage extends Page implements HasForms
@@ -34,11 +32,17 @@ class MailReportPage extends Page implements HasForms
 
     public int $page = 1;
     public int $perPage = 15;
-    public ?LengthAwarePaginator $banksPaginator = null;
+
+    /** Tablo satırları (Livewire serialize edebilsin diye sadece dizi) */
+    public array $tableRows = [];
+    public int $totalCount = 0;
+    public int $currentPage = 1;
+    public int $lastPage = 1;
+    public int $firstItem = 0;
+    public int $lastItem = 0;
 
     public function mount(MutabakatReportService $reportService): void
     {
-        $this->banksPaginator = new LengthAwarePaginatorConcrete([], 0, 15, 1);
         try {
             $this->filters['year'] = $this->filters['year'] ?? now()->year;
             $this->form->fill($this->filters);
@@ -48,7 +52,6 @@ class MailReportPage extends Page implements HasForms
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            $this->banksPaginator = new LengthAwarePaginatorConcrete([], 0, max(1, $this->perPage), 1);
         }
     }
 
@@ -149,17 +152,38 @@ class MailReportPage extends Page implements HasForms
         try {
             $perPage = max(1, min(100, $this->perPage));
             $page = max(1, $this->page);
-            $this->banksPaginator = $reportService->getMailReportBanksPaginated(
+            $paginator = $reportService->getMailReportBanksPaginated(
                 $this->filters,
                 $perPage,
                 $page
             );
+            $this->tableRows = collect($paginator->items())->map(function ($bank) {
+                return [
+                    'customer_name' => $bank->customer?->name ?? '-',
+                    'bank_name' => $bank->bank_name ?? '-',
+                    'year' => $bank->request?->year ?? '-',
+                    'mail_sent_at' => $bank->mail_sent_at ? $bank->mail_sent_at->format('d.m.Y H:i') : '-',
+                    'mail_status' => $bank->mail_status ?? 'pending',
+                    'reply_status' => $bank->reply_status ?? 'pending',
+                    'reply_received_at' => $bank->reply_received_at ? $bank->reply_received_at->format('d.m.Y H:i') : '-',
+                ];
+            })->values()->all();
+            $this->totalCount = (int) $paginator->total();
+            $this->currentPage = (int) $paginator->currentPage();
+            $this->lastPage = max(1, (int) $paginator->lastPage());
+            $this->firstItem = (int) ($paginator->firstItem() ?? 0);
+            $this->lastItem = (int) ($paginator->lastItem() ?? 0);
         } catch (\Throwable $e) {
             Log::error('MailReportPage loadData hatası', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            $this->banksPaginator = new LengthAwarePaginatorConcrete([], 0, max(1, $this->perPage), 1);
+            $this->tableRows = [];
+            $this->totalCount = 0;
+            $this->currentPage = 1;
+            $this->lastPage = 1;
+            $this->firstItem = 0;
+            $this->lastItem = 0;
         }
     }
 
