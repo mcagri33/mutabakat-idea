@@ -69,13 +69,14 @@ class ReconciliationIncomingMailService
                 return;
             }
             
-            // Banka ile eşleştir
+            // Banka ile eşleştir (sadece request_id dolu olanlar - NOT NULL constraint için)
             $bank = ReconciliationBank::where('officer_email', $fromEmail)
                 ->where('reply_status', 'pending')
+                ->whereNotNull('request_id')
                 ->first();
             
-            if (!$bank) {
-                // Eşleşme bulunamadı (bounce, bilinmeyen gönderen vb.) - sadece logla, kayıt oluşturma (request_id NOT NULL)
+            if (!$bank || $bank->request_id === null) {
+                // Eşleşme yok veya request_id null (bounce / bilinmeyen gönderen) - kayıt oluşturma
                 Log::info('Eşleşmeyen mail atlandı (kayıt oluşturulmaz)', [
                     'from_email' => $fromEmail,
                     'from_name' => $fromName,
