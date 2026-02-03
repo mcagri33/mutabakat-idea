@@ -2,17 +2,23 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Mail\MutabakatRaporuMailable;
 use App\Models\Customer;
 use App\Models\ReconciliationRequest;
+use App\Models\User;
 use App\Exports\ReconciliationRequestExport;
+use App\Services\MutabakatReportService;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsPage extends Page implements HasForms
@@ -190,10 +196,70 @@ class ReportsPage extends Page implements HasForms
         ];
     }
 
+    public function getHeaderActions(): array
+    {
+        return [
+            Action::make('sendReportToAdmins')
+                ->label('Raporu adminlere e-posta ile gönder')
+                ->icon('heroicon-o-envelope')
+                ->color('primary')
+                ->requiresConfirmation()
+                ->modalHeading('Raporu adminlere gönder')
+                ->modalDescription('Mutabakat raporu (bankası eklenmemiş firmalar listesi ve firma–banka bazlı mail gönderim özeti) yalnızca admin kullanıcılara e-posta ile gönderilecektir. Devam edilsin mi?')
+                ->modalSubmitActionLabel('Gönder')
+                ->action(fn () => $this->sendReportToAdmins()),
+        ];
+    }
+
     public function exportExcel(): StreamedResponse
     {
         $export = new ReconciliationRequestExport($this->reportData);
         return $export->export();
+    }
+
+    /**
+     * Mutabakat raporunu (bankası olmayan firmalar + firma-banka mail özeti) sadece adminlere e-posta ile gönderir.
+     */
+    public function sendReportToAdmins(): void
+    {
+        $admins = User::whereHas('roles', function ($q) {
+            $q->where('name', 'admin')->orWhere('name', 'super-admin');
+        })->get();
+
+        if ($admins->isEmpty()) {
+            $admins = User::all();
+        }
+
+        $emails = $admins->pluck('email')->filter()->unique()->values();
+        if ($emails->isEmpty()) {
+            Notification::make()
+                ->title('Rapor gönderilemedi')
+                ->body('Admin e-posta adresi bulunamadı.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        try {
+            $service = app(MutabakatReportService::class);
+            $customersWithoutBanks = $service->getCustomersWithoutBanks();
+            $mailReportRows = $service->getMailReportRows();
+
+            $mailable = new MutabakatRaporuMailable($customersWithoutBanks, $mailReportRows);
+            Mail::to($emails->toArray())->send($mailable);
+
+            Notification::make()
+                ->title('Rapor gönderildi')
+                ->body($emails->count() . ' admin adresine e-posta ile gönderildi.')
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Rapor gönderilemedi')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 }
 
