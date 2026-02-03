@@ -40,7 +40,7 @@ class FirmSendingStatusReportPage extends Page implements HasForms
     {
         try {
             if ($this->year <= 0) {
-                $this->year = (int) now()->year;
+                $this->year = (int) now()->year - 1; // Denetim yılı: cari yıldan 1 önce
             }
             $this->filters = ['year' => $this->year];
             $this->form->fill($this->filters);
@@ -86,7 +86,7 @@ class FirmSendingStatusReportPage extends Page implements HasForms
                                         }
                                     })
                                     ->required()
-                                    ->default(now()->year),
+                                    ->default(now()->year - 1),
                             ]),
                         Forms\Components\Actions::make([
                             Forms\Components\Actions\Action::make('filter')
@@ -95,7 +95,7 @@ class FirmSendingStatusReportPage extends Page implements HasForms
                                 ->color('primary')
                                 ->action(function (MutabakatReportService $reportService) {
                                     $state = $this->form->getState();
-                                    $this->year = (int) ($state['year'] ?? now()->year);
+                                    $this->year = (int) ($state['year'] ?? now()->year - 1 - 1);
                                     $this->page = 1;
                                     $this->loadData($reportService);
                                 }),
@@ -113,7 +113,7 @@ class FirmSendingStatusReportPage extends Page implements HasForms
     public function loadData(MutabakatReportService $reportService): void
     {
         try {
-            $year = $this->year > 0 ? $this->year : (int) now()->year;
+            $year = $this->year > 0 ? $this->year : (int) now()->year - 1;
             $this->year = $year;
             $perPage = max(1, min(100, $this->perPage));
             $page = max(1, $this->page);
@@ -160,7 +160,7 @@ class FirmSendingStatusReportPage extends Page implements HasForms
                 ->color('success')
                 ->action(function (): StreamedResponse {
                     $reportService = app(MutabakatReportService::class);
-                    $year = $this->year > 0 ? $this->year : (int) now()->year;
+                    $year = $this->year > 0 ? $this->year : (int) now()->year - 1;
                     $paginator = $reportService->getFirmSendingStatusPaginated($year, 50000, 1);
                     $items = $paginator->items();
                     $rows = is_array($items) ? $items : collect($items)->all();
