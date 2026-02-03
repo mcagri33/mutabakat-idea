@@ -23,6 +23,11 @@ class MailReportPage extends Page
         $this->mailReportRows = $reportService->getMailReportRows();
     }
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     public static function getNavigationSort(): ?int
     {
         return 3;
