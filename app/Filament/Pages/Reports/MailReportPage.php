@@ -2,14 +2,17 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Exports\MailReportExport;
 use App\Models\Customer;
 use App\Services\MutabakatReportService;
+use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MailReportPage extends Page implements HasForms
 {
@@ -197,6 +200,32 @@ class MailReportPage extends Page implements HasForms
     {
         $this->page = 1;
         $this->loadData(app(MutabakatReportService::class));
+    }
+
+    public function getHeaderActions(): array
+    {
+        return [
+            Action::make('exportExcel')
+                ->label('Excel\'e Aktar')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->action(function (): StreamedResponse {
+                    $reportService = app(MutabakatReportService::class);
+                    $paginator = $reportService->getMailReportBanksPaginated($this->filters, 50000, 1);
+                    $rows = collect($paginator->items())->map(function ($bank) {
+                        return [
+                            'customer_name' => $bank->customer?->name ?? '-',
+                            'bank_name' => $bank->bank_name ?? '-',
+                            'year' => $bank->request?->year ?? '-',
+                            'mail_sent_at' => $bank->mail_sent_at ? $bank->mail_sent_at->format('d.m.Y H:i') : '-',
+                            'mail_status' => $bank->mail_status ?? 'pending',
+                            'reply_status' => $bank->reply_status ?? 'pending',
+                            'reply_received_at' => $bank->reply_received_at ? $bank->reply_received_at->format('d.m.Y H:i') : '-',
+                        ];
+                    })->values()->all();
+                    return (new MailReportExport($rows))->export();
+                }),
+        ];
     }
 
     public function getMaxContentWidth(): ?string
