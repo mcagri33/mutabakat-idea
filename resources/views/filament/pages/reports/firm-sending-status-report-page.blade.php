@@ -57,7 +57,7 @@
                                                 $status = $row['status'] ?? 'gonderilmedi';
                                                 $statusLabels = [
                                                     'hepsi_gonderildi' => 'Hepsi gönderildi',
-                                                    'manuel_ile' => 'Manuel ile',
+                                                    'manuel_ile' => 'Firma mutabakatı kendisi gönderdi',
                                                     'kismen' => 'Kısmen',
                                                     'gonderilmedi' => 'Gönderilmedi',
                                                     'banka_eklenmemis' => 'Banka eklenmemiş',
