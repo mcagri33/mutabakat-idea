@@ -26,10 +26,10 @@ class ReportsPage extends Page implements HasForms
     use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-chart-bar';
-    protected static ?string $navigationLabel = 'Raporlar';
+    protected static ?string $navigationLabel = 'Mutabakat Talepleri';
     protected static ?string $title = 'Raporlar';
-    protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
-    protected static ?int $navigationSort = 10;
+    protected static ?string $navigationGroup = 'Raporlar';
+    protected static ?int $navigationSort = 1;
     protected static string $view = 'filament.pages.reports.reports-page';
 
     // Filtreler
