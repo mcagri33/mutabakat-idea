@@ -13,3 +13,8 @@ Schedule::command('reconciliation:check-mails')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Haftalık mutabakat raporunu adminlere e-posta ile gönder (her Pazartesi 09:00)
+Schedule::command('mutabakat:send-weekly-report')
+    ->weeklyOn(1, '09:00')
+    ->timezone('Europe/Istanbul');
