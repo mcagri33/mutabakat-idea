@@ -2,11 +2,16 @@
 
 namespace App\Filament\Resources\ReconciliationRequestResource\RelationManagers;
 
+use App\Models\CustomerBank;
+use App\Models\ReconciliationBank;
+use App\Jobs\SendReconciliationMailJob;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 
 class BanksRelationManager extends RelationManager
 {
@@ -93,7 +98,65 @@ class BanksRelationManager extends RelationManager
                         default => $state,
                     }),
             ])
-            ->headerActions([]) // Create yok
+            ->headerActions([
+                Action::make('addMissingBanks')
+                    ->label('Eksik bankaları ekle')
+                    ->icon('heroicon-o-plus-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Eksik bankaları ekle')
+                    ->modalDescription('Bu talepte henüz yer almayan firma bankaları listeye eklenecek ve e-posta adresi olanlara mutabakat maili gönderilecek. Devam edilsin mi?')
+                    ->modalSubmitActionLabel('Ekle ve mail gönder')
+                    ->modalCancelActionLabel('İptal')
+                    ->action(function (): void {
+                        $request = $this->getOwnerRecord();
+                        $existingBankIds = $request->banks()->whereNotNull('customer_bank_id')->pluck('customer_bank_id')->filter()->all();
+                        $customerBanks = CustomerBank::query()
+                            ->where('customer_id', $request->customer_id)
+                            ->where('is_active', true)
+                            ->when(!empty($existingBankIds), fn ($q) => $q->whereNotIn('id', $existingBankIds))
+                            ->get();
+
+                        $added = 0;
+                        $mailsQueued = 0;
+
+                        foreach ($customerBanks as $bank) {
+                            $recBank = ReconciliationBank::create([
+                                'request_id'        => $request->id,
+                                'customer_id'       => $request->customer_id,
+                                'customer_bank_id'  => $bank->id,
+                                'bank_name'         => $bank->bank_name,
+                                'branch_name'       => $bank->branch_name,
+                                'officer_name'      => $bank->officer_name,
+                                'officer_email'     => $bank->officer_email,
+                                'officer_phone'     => $bank->officer_phone,
+                                'mail_status'       => 'pending',
+                                'reply_status'      => 'pending',
+                            ]);
+                            $added++;
+                            if ($bank->officer_email) {
+                                SendReconciliationMailJob::dispatch($recBank);
+                                $mailsQueued++;
+                            }
+                        }
+
+                        if ($added > 0) {
+                            Notification::make()
+                                ->title('Eksik bankalar eklendi')
+                                ->body($mailsQueued > 0
+                                    ? "{$added} banka eklendi, {$mailsQueued} adrese mail gönderimi kuyruğa alındı."
+                                    : "{$added} banka eklendi. E-posta adresi olan banka bulunamadığı için mail gönderilmedi.")
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Eklenecek banka yok')
+                                ->body('Bu talepte zaten tüm firma bankaları mevcut veya eklenecek aktif banka bulunamadı.')
+                                ->warning()
+                                ->send();
+                        }
+                    }),
+            ])
             ->actions([
     Tables\Actions\EditAction::make(),
 
