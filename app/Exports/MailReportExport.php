@@ -56,7 +56,11 @@ class MailReportExport
         foreach ($this->rows as $r) {
             $mailStatus = $r['mail_status'] ?? 'pending';
             $replyStatus = $r['reply_status'] ?? 'pending';
-            $source = ($r['source'] ?? 'sistem') === 'manuel' ? 'Manuel' : 'Sistem';
+            $source = match ($r['source'] ?? 'sistem') {
+                'manuel' => 'Manuel',
+                'banka_maili_gelmemis' => 'Banka Maili Gelmedi',
+                default => 'Sistem',
+            };
             $sheet->setCellValue('A' . $row, $r['customer_name'] ?? '-');
             $sheet->setCellValue('B' . $row, $r['bank_name'] ?? '-');
             $sheet->setCellValue('C' . $row, $r['year'] ?? '-');

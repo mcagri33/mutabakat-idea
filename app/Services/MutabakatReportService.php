@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\CustomerBank;
 use App\Models\ManualReconciliationEntry;
 use App\Models\ReconciliationBank;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -144,7 +145,71 @@ class MutabakatReportService
             ];
         });
 
-        $merged = $systemRows->concat($manualRows)->sortByDesc('sort_at')->values();
+        $yearForMissing = isset($filters['year']) && $filters['year'] !== null && $filters['year'] !== ''
+            ? (int) $filters['year']
+            : now()->year;
+
+        $includeMissingBanks = empty($filters['mail_status']) && empty($filters['reply_status']);
+
+        $missingRows = collect();
+        if ($includeMissingBanks) {
+            $customerBankQuery = CustomerBank::query()
+                ->with('customer')
+                ->whereHas('customer', fn ($q) => $q->where('is_active', true));
+
+            if (! empty($filters['customer_id'])) {
+                $customerBankQuery->where('customer_id', $filters['customer_id']);
+            }
+
+            $systemBankKeys = ReconciliationBank::query()
+                ->whereHas('request', fn ($q) => $q->where('year', $yearForMissing))
+                ->when(! empty($filters['customer_id']), fn ($q) => $q->where('customer_id', $filters['customer_id']))
+                ->get()
+                ->map(function ($rb) {
+                    if ($rb->customer_bank_id) {
+                        return 'id:' . $rb->customer_bank_id;
+                    }
+
+                    return 'key:' . $rb->customer_id . '|' . trim($rb->bank_name ?? '');
+                })
+                ->unique()
+                ->values()
+                ->all();
+
+            $manualBankKeys = ManualReconciliationEntry::query()
+                ->where('year', $yearForMissing)
+                ->when(! empty($filters['customer_id']), fn ($q) => $q->where('customer_id', $filters['customer_id']))
+                ->get()
+                ->map(fn ($e) => $e->customer_id . '|' . trim($e->bank_name))
+                ->unique()
+                ->values()
+                ->all();
+
+            $customerBanks = $customerBankQuery->get();
+
+            foreach ($customerBanks as $cb) {
+                $inSystem = in_array('id:' . $cb->id, $systemBankKeys)
+                    || in_array('key:' . $cb->customer_id . '|' . trim($cb->bank_name), $systemBankKeys);
+                $manualKey = $cb->customer_id . '|' . trim($cb->bank_name);
+                $inManual = in_array($manualKey, $manualBankKeys);
+
+                if (! $inSystem && ! $inManual) {
+                    $missingRows->push([
+                        'customer_name'      => $cb->customer?->name ?? '-',
+                        'bank_name'          => $cb->bank_name . ($cb->branch_name ? ' - ' . $cb->branch_name : ''),
+                        'year'               => (string) $yearForMissing,
+                        'mail_sent_at'       => '-',
+                        'mail_status'        => 'pending',
+                        'reply_status'       => 'pending',
+                        'reply_received_at'  => '-',
+                        'source'             => 'banka_maili_gelmemis',
+                        'sort_at'            => '',
+                    ]);
+                }
+            }
+        }
+
+        $merged = $systemRows->concat($manualRows)->concat($missingRows)->sortByDesc('sort_at')->values();
         $total = $merged->count();
         $slice = $merged->slice(($page - 1) * $perPage, $perPage)->values();
 

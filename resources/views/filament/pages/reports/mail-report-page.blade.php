@@ -9,7 +9,7 @@
         <div class="fi-section overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
             <div class="p-6 sm:p-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Firma – Banka Bazlı Mail Raporu</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gönderilen mutabakat mailleri, gönderim tarihi ve cevap durumu.</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gönderilen mutabakat mailleri, gönderim tarihi, cevap durumu ve banka maili gelmemiş firmalar.</p>
             </div>
 
             <div class="px-4 sm:px-6 py-2 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 bg-gray-50/50 dark:bg-gray-800/50">
@@ -75,10 +75,20 @@
                                         </td>
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $row['reply_received_at'] ?? '-' }}</td>
                                         <td class="fi-table-cell px-4 py-3 whitespace-nowrap">
-                                            @php $src = $row['source'] ?? 'sistem'; @endphp
-                                            <x-filament::badge :color="$src === 'manuel' ? 'warning' : 'primary'" size="sm">
-                                                {{ $src === 'manuel' ? 'Manuel' : 'Sistem' }}
-                                            </x-filament::badge>
+                                            @php
+                                                $src = $row['source'] ?? 'sistem';
+                                                $srcLabel = match ($src) {
+                                                    'manuel' => 'Manuel',
+                                                    'banka_maili_gelmemis' => 'Banka Maili Gelmedi',
+                                                    default => 'Sistem',
+                                                };
+                                                $srcColor = match ($src) {
+                                                    'manuel' => 'warning',
+                                                    'banka_maili_gelmemis' => 'danger',
+                                                    default => 'primary',
+                                                };
+                                            @endphp
+                                            <x-filament::badge :color="$srcColor" size="sm">{{ $srcLabel }}</x-filament::badge>
                                         </td>
                                     </tr>
                                 @endforeach
