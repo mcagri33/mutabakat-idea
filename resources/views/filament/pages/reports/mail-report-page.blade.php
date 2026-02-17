@@ -8,8 +8,8 @@
         {{-- Tablo kartı --}}
         <div class="fi-section overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
             <div class="p-6 sm:p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Firma – Banka Bazlı Mail Raporu</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gönderilen mutabakat mailleri, gönderim tarihi, cevap durumu, banka maili gelmemiş ve banka eklenmemiş firmalar.</p>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Firma Bazlı Mail Raporu</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Firmaların gönderim durumu, bankadan cevap durumu ve özet bilgileri.</p>
             </div>
 
             <div class="px-4 sm:px-6 py-2 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 bg-gray-50/50 dark:bg-gray-800/50">
@@ -26,7 +26,7 @@
                     </select>
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Toplam <strong>{{ $totalCount }}</strong> kayıt
+                    Toplam <strong>{{ $totalCount }}</strong> firma
                 </p>
             </div>
 
@@ -36,13 +36,11 @@
                         <thead class="divide-y divide-gray-200 dark:divide-gray-700 bg-gray-50 dark:bg-gray-800">
                             <tr class="divide-x divide-gray-200 dark:divide-gray-700">
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Firma</th>
-                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Banka</th>
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Yıl</th>
-                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Gönderim Tarihi</th>
-                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Mail Durumu</th>
-                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cevap Durumu</th>
-                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cevap Tarihi</th>
-                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Kaynak</th>
+                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Gönderildi</th>
+                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Bankadan Cevap Geldi</th>
+                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Bankadan Cevap Bekliyor</th>
+                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Durum / Özet</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
@@ -50,54 +48,31 @@
                                 @foreach($tableRows as $row)
                                     <tr class="fi-table-row divide-x divide-gray-200 dark:divide-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">{{ $row['customer_name'] ?? '-' }}</td>
-                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $row['bank_name'] ?? '-' }}</td>
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $row['year'] ?? '-' }}</td>
-                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $row['mail_sent_at'] ?? '-' }}</td>
-                                        <td class="fi-table-cell px-4 py-3 whitespace-nowrap">
+                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                             @php
-                                                $mailStatus = $row['mail_status'] ?? 'pending';
-                                                $mailLabels = ['sent' => 'Gönderildi', 'failed' => 'Hata', 'pending' => 'Beklemede'];
-                                                $mailColors = ['sent' => 'success', 'failed' => 'danger', 'pending' => 'gray'];
-                                                $mailLabel = $mailLabels[$mailStatus] ?? 'Beklemede';
-                                                $mailColor = $mailColors[$mailStatus] ?? 'gray';
+                                                $sent = $row['sent_count'] ?? 0;
+                                                $manual = $row['manual_count'] ?? 0;
                                             @endphp
-                                            <x-filament::badge :color="$mailColor" size="sm">{{ $mailLabel }}</x-filament::badge>
+                                            @if($sent > 0 && $manual > 0)
+                                                {{ $sent }} banka + {{ $manual }} manuel
+                                            @elseif($sent > 0)
+                                                {{ $sent }} banka
+                                            @elseif($manual > 0)
+                                                {{ $manual }} manuel
+                                            @else
+                                                -
+                                            @endif
                                         </td>
-                                        <td class="fi-table-cell px-4 py-3 whitespace-nowrap">
-                                            @php
-                                                $replyStatus = $row['reply_status'] ?? 'pending';
-                                                $replyLabels = ['received' => 'Geldi', 'completed' => 'Tamamlandı', 'pending' => 'Beklemede'];
-                                                $replyColors = ['received' => 'success', 'completed' => 'success', 'pending' => 'gray'];
-                                                $replyLabel = $replyLabels[$replyStatus] ?? 'Beklemede';
-                                                $replyColor = $replyColors[$replyStatus] ?? 'gray';
-                                            @endphp
-                                            <x-filament::badge :color="$replyColor" size="sm">{{ $replyLabel }}</x-filament::badge>
-                                        </td>
-                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $row['reply_received_at'] ?? '-' }}</td>
-                                        <td class="fi-table-cell px-4 py-3 whitespace-nowrap">
-                                            @php
-                                                $src = $row['source'] ?? 'sistem';
-                                                $srcLabel = match ($src) {
-                                                    'manuel' => 'Manuel',
-                                                    'banka_maili_gelmemis' => 'Banka Maili Gelmedi',
-                                                    'banka_eklenmemis' => 'Banka Eklenmemiş',
-                                                    default => 'Sistem',
-                                                };
-                                                $srcColor = match ($src) {
-                                                    'manuel' => 'warning',
-                                                    'banka_maili_gelmemis' => 'danger',
-                                                    'banka_eklenmemis' => 'gray',
-                                                    default => 'primary',
-                                                };
-                                            @endphp
-                                            <x-filament::badge :color="$srcColor" size="sm">{{ $srcLabel }}</x-filament::badge>
-                                        </td>
+                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ ($row['reply_received_count'] ?? 0) > 0 ? ($row['reply_received_count'] . ' banka') : '-' }}</td>
+                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ ($row['reply_pending_count'] ?? 0) > 0 ? ($row['reply_pending_count'] . ' banka') : '-' }}</td>
+                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $row['summary'] ?? '-' }}</td>
                                     </tr>
                                 @endforeach
                             @else
                                 <tr>
-                                    <td colspan="8" class="fi-table-cell px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                        Henüz mail kaydı bulunmuyor veya filtreye uygun kayıt yok.
+                                    <td colspan="6" class="fi-table-cell px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        Henüz firma bulunmuyor veya filtreye uygun kayıt yok.
                                     </td>
                                 </tr>
                             @endif
@@ -109,9 +84,9 @@
             <div class="fi-section-footer flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 dark:border-gray-700 px-4 py-3 sm:px-6 bg-gray-50/50 dark:bg-gray-800/50">
                 <p class="text-sm text-gray-600 dark:text-gray-400">
                     @if($totalCount > 0)
-                        {{ $firstItem }} – {{ $lastItem }} / {{ $totalCount }}
+                        {{ $firstItem }} – {{ $lastItem }} / {{ $totalCount }} firma
                     @else
-                        0 kayıt
+                        0 firma
                     @endif
                 </p>
                 @if($lastPage > 1)

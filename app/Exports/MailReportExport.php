@@ -22,20 +22,15 @@ class MailReportExport
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Firma Banka Mail Raporu');
-
-        $mailLabels = ['sent' => 'Gönderildi', 'failed' => 'Hata', 'pending' => 'Beklemede'];
-        $replyLabels = ['received' => 'Geldi', 'completed' => 'Tamamlandı', 'pending' => 'Beklemede'];
+        $sheet->setTitle('Firma Bazlı Mail Raporu');
 
         $headings = [
             'Firma',
-            'Banka',
             'Yıl',
-            'Gönderim Tarihi',
-            'Mail Durumu',
-            'Cevap Durumu',
-            'Cevap Tarihi',
-            'Kaynak',
+            'Gönderildi',
+            'Bankadan Cevap Geldi',
+            'Bankadan Cevap Bekliyor',
+            'Durum / Özet',
         ];
         $sheet->fromArray([$headings], null, 'A1');
 
@@ -50,37 +45,39 @@ class MailReportExport
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A1:H1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
 
         $row = 2;
         foreach ($this->rows as $r) {
-            $mailStatus = $r['mail_status'] ?? 'pending';
-            $replyStatus = $r['reply_status'] ?? 'pending';
-            $source = match ($r['source'] ?? 'sistem') {
-                'manuel' => 'Manuel',
-                'banka_maili_gelmemis' => 'Banka Maili Gelmedi',
-                'banka_eklenmemis' => 'Banka Eklenmemiş',
-                default => 'Sistem',
-            };
+            $sent = $r['sent_count'] ?? 0;
+            $manual = $r['manual_count'] ?? 0;
+            $sentText = '-';
+            if ($sent > 0 && $manual > 0) {
+                $sentText = $sent . ' banka + ' . $manual . ' manuel';
+            } elseif ($sent > 0) {
+                $sentText = $sent . ' banka';
+            } elseif ($manual > 0) {
+                $sentText = $manual . ' manuel';
+            }
+
+            $replyReceived = $r['reply_received_count'] ?? 0;
+            $replyPending = $r['reply_pending_count'] ?? 0;
+
             $sheet->setCellValue('A' . $row, $r['customer_name'] ?? '-');
-            $sheet->setCellValue('B' . $row, $r['bank_name'] ?? '-');
-            $sheet->setCellValue('C' . $row, $r['year'] ?? '-');
-            $sheet->setCellValue('D' . $row, $r['mail_sent_at'] ?? '-');
-            $sheet->setCellValue('E' . $row, $mailLabels[$mailStatus] ?? $mailStatus);
-            $sheet->setCellValue('F' . $row, $replyLabels[$replyStatus] ?? $replyStatus);
-            $sheet->setCellValue('G' . $row, $r['reply_received_at'] ?? '-');
-            $sheet->setCellValue('H' . $row, $source);
+            $sheet->setCellValue('B' . $row, $r['year'] ?? '-');
+            $sheet->setCellValue('C' . $row, $sentText);
+            $sheet->setCellValue('D' . $row, $replyReceived > 0 ? $replyReceived . ' banka' : '-');
+            $sheet->setCellValue('E' . $row, $replyPending > 0 ? $replyPending . ' banka' : '-');
+            $sheet->setCellValue('F' . $row, $r['summary'] ?? '-');
             $row++;
         }
 
         $sheet->getColumnDimension('A')->setWidth(30);
-        $sheet->getColumnDimension('B')->setWidth(25);
-        $sheet->getColumnDimension('C')->setWidth(8);
-        $sheet->getColumnDimension('D')->setWidth(18);
-        $sheet->getColumnDimension('E')->setWidth(14);
-        $sheet->getColumnDimension('F')->setWidth(14);
-        $sheet->getColumnDimension('G')->setWidth(18);
-        $sheet->getColumnDimension('H')->setWidth(10);
+        $sheet->getColumnDimension('B')->setWidth(8);
+        $sheet->getColumnDimension('C')->setWidth(25);
+        $sheet->getColumnDimension('D')->setWidth(22);
+        $sheet->getColumnDimension('E')->setWidth(24);
+        $sheet->getColumnDimension('F')->setWidth(50);
 
         $filename = 'firma_banka_mail_raporu_' . now()->format('Y-m-d_His') . '.xlsx';
         $writer = new Xlsx($spreadsheet);

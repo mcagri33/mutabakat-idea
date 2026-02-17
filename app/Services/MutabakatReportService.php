@@ -241,6 +241,222 @@ class MutabakatReportService
     }
 
     /**
+     * Firma bazlı mail raporu (özet görünüm).
+     * Her firma tek satır: gönderilen banka sayısı, cevap gelen/bekleyen, durum özeti.
+     *
+     * @param array{customer_id?: int|null, year?: int|null, mail_status?: string|null, reply_status?: string|null} $filters
+     * @return LengthAwarePaginator<array<string, mixed>>
+     */
+    public function getMergedMailReportByFirmPaginated(array $filters, int $perPage = 15, int $page = 1): LengthAwarePaginator
+    {
+        $year = isset($filters['year']) && $filters['year'] !== null && $filters['year'] !== ''
+            ? (int) $filters['year']
+            : now()->year;
+
+        $customerQuery = Customer::query()
+            ->where('is_active', true)
+            ->withCount('banks')
+            ->orderBy('name');
+
+        if (! empty($filters['customer_id'])) {
+            $customerQuery->where('id', $filters['customer_id']);
+        }
+
+        $customers = $customerQuery->get();
+
+        $systemBanks = ReconciliationBank::query()
+            ->whereHas('request', fn ($q) => $q->where('year', $year))
+            ->when(! empty($filters['customer_id']), fn ($q) => $q->where('customer_id', $filters['customer_id']))
+            ->get();
+
+        $systemByCustomer = $systemBanks->groupBy('customer_id')->map(function ($banks) {
+            $sent = $banks->where('mail_status', 'sent')->count();
+            $received = $banks->whereIn('reply_status', ['received', 'completed'])->count();
+            $pending = $banks->where('reply_status', 'pending')->count();
+
+            return [
+                'sent_count' => $sent,
+                'reply_received_count' => $received,
+                'reply_pending_count' => $pending,
+            ];
+        });
+
+        $manualEntries = ManualReconciliationEntry::query()
+            ->where('year', $year)
+            ->when(! empty($filters['customer_id']), fn ($q) => $q->where('customer_id', $filters['customer_id']))
+            ->get();
+
+        $manualByCustomer = $manualEntries->groupBy('customer_id')->map(function ($entries) {
+            $received = $entries->filter(fn ($e) => $e->reply_received_at)->count();
+            $pending = $entries->filter(fn ($e) => ! $e->reply_received_at)->count();
+
+            return [
+                'count' => $entries->count(),
+                'reply_received_count' => $received,
+                'reply_pending_count' => $pending,
+            ];
+        });
+
+        $systemBankIds = $systemBanks->pluck('customer_bank_id')->filter()->unique()->values()->all();
+        $systemBankKeys = $systemBanks->filter(fn ($rb) => $rb->customer_bank_id === null)
+            ->map(fn ($rb) => $rb->customer_id . '|' . trim($rb->bank_name ?? ''))
+            ->unique()->values()->all();
+        $manualBankKeys = $manualEntries->map(fn ($e) => $e->customer_id . '|' . trim($e->bank_name))->unique()->values()->all();
+
+        $customerBanks = CustomerBank::query()
+            ->whereHas('customer', fn ($q) => $q->where('is_active', true))
+            ->when(! empty($filters['customer_id']), fn ($q) => $q->where('customer_id', $filters['customer_id']))
+            ->get();
+
+        $banksWithoutActivity = $customerBanks->filter(function ($cb) use ($systemBankIds, $systemBankKeys, $manualBankKeys) {
+            $inSystem = in_array($cb->id, $systemBankIds)
+                || in_array($cb->customer_id . '|' . trim($cb->bank_name), $systemBankKeys);
+            $inManual = in_array($cb->customer_id . '|' . trim($cb->bank_name), $manualBankKeys);
+
+            return ! $inSystem && ! $inManual;
+        });
+
+        $missingBanksByCustomer = $banksWithoutActivity->groupBy('customer_id')->map(fn ($banks) => $banks->count());
+
+        $rows = $customers->map(function ($customer) use ($year, $systemByCustomer, $manualByCustomer, $missingBanksByCustomer) {
+            $sys = $systemByCustomer[$customer->id] ?? ['sent_count' => 0, 'reply_received_count' => 0, 'reply_pending_count' => 0];
+            $man = $manualByCustomer[$customer->id] ?? ['count' => 0, 'reply_received_count' => 0, 'reply_pending_count' => 0];
+            $bankCount = (int) $customer->banks_count;
+            $sentCount = $sys['sent_count'];
+            $manualCount = $man['count'];
+            $replyReceived = $sys['reply_received_count'] + $man['reply_received_count'];
+            $replyPending = $sys['reply_pending_count'] + $man['reply_pending_count'];
+            $missingCount = $missingBanksByCustomer[$customer->id] ?? 0;
+
+            $summary = $this->buildFirmSummary(
+                $bankCount,
+                $sentCount,
+                $manualCount,
+                $replyReceived,
+                $replyPending,
+                $missingCount
+            );
+
+            return [
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'year' => (string) $year,
+                'sent_count' => $sentCount,
+                'manual_count' => $manualCount,
+                'reply_received_count' => $replyReceived,
+                'reply_pending_count' => $replyPending,
+                'missing_bank_count' => $missingCount,
+                'bank_count' => $bankCount,
+                'summary' => $summary,
+            ];
+        })->values();
+
+        $rows = $this->applyFirmLevelFilters($rows, $filters);
+
+        $total = $rows->count();
+        $slice = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginatorConcrete($slice->all(), $total, $perPage, $page, [
+            'path' => request()->url(),
+            'pageName' => 'page',
+        ]);
+    }
+
+    private function buildFirmSummary(
+        int $bankCount,
+        int $sentCount,
+        int $manualCount,
+        int $replyReceived,
+        int $replyPending,
+        int $missingCount
+    ): string {
+        if ($bankCount === 0) {
+            return 'Banka eklenmemiş';
+        }
+
+        if ($manualCount > 0 && $sentCount === 0) {
+            return 'Firma mutabakatı kendisi gönderdi (' . $manualCount . ' banka)';
+        }
+
+        $parts = [];
+        if ($sentCount > 0) {
+            $parts[] = 'Gönderildi: ' . $sentCount . ' banka';
+        }
+        if ($manualCount > 0) {
+            $parts[] = 'Manuel: ' . $manualCount . ' banka (firma kendisi gönderdi)';
+        }
+        if ($replyReceived > 0) {
+            $parts[] = 'Cevap geldi: ' . $replyReceived;
+        }
+        if ($replyPending > 0) {
+            $parts[] = 'Cevap bekliyor: ' . $replyPending;
+        }
+        if ($missingCount > 0) {
+            $parts[] = 'Banka maili gelmedi: ' . $missingCount;
+        }
+
+        return implode(' | ', $parts) ?: 'İşlem yok';
+    }
+
+    private function applyFirmLevelFilters(Collection $rows, array $filters): Collection
+    {
+        if (! empty($filters['mail_status'])) {
+            if ($filters['mail_status'] === 'sent') {
+                $rows = $rows->filter(fn ($r) => ($r['sent_count'] ?? 0) > 0 || ($r['manual_count'] ?? 0) > 0);
+            } elseif ($filters['mail_status'] === 'pending') {
+    $rows = $rows->filter(function ($r) {
+        $bc = (int) ($r['bank_count'] ?? 0);
+        $mb = (int) ($r['missing_bank_count'] ?? 0);
+        $sc = (int) ($r['sent_count'] ?? 0);
+        $mc = (int) ($r['manual_count'] ?? 0);
+
+        return $bc === 0 || $mb > 0 || ($sc + $mc) < $bc;
+    });
+              } elseif ($filters['mail_status'] === 'pending') {
+    $rows = $rows->filter(function ($r) {
+        $bc = (int) ($r['bank_count'] ?? 0);
+        $mb = (int) ($r['missing_bank_count'] ?? 0);
+        $sc = (int) ($r['sent_count'] ?? 0);
+        $mc = (int) ($r['manual_count'] ?? 0);
+
+        return $bc === 0 || $mb > 0 || ($sc + $mc) < $bc;
+    });
+              } elseif ($filters['mail_status'] === 'pending') {
+    $rows = $rows->filter(function ($r) {
+        $bc = (int) ($r['bank_count'] ?? 0);
+        $mb = (int) ($r['missing_bank_count'] ?? 0);
+        $sc = (int) ($r['sent_count'] ?? 0);
+        $mc = (int) ($r['manual_count'] ?? 0);
+
+        return $bc === 0 || $mb > 0 || ($sc + $mc) < $bc;
+    });
+              } elseif ($filters['mail_status'] === 'pending') {
+    $rows = $rows->filter(function ($r) {
+        $bc = (int) ($r['bank_count'] ?? 0);
+        $mb = (int) ($r['missing_bank_count'] ?? 0);
+        $sc = (int) ($r['sent_count'] ?? 0);
+        $mc = (int) ($r['manual_count'] ?? 0);
+
+        return $bc === 0 || $mb > 0 || ($sc + $mc) < $bc;
+    });
+            } elseif ($filters['mail_status'] === 'failed') {
+                $rows = $rows->filter(fn ($r) => false);
+            }
+        }
+        if (! empty($filters['reply_status'])) {
+            if ($filters['reply_status'] === 'received' || $filters['reply_status'] === 'completed') {
+                $rows = $rows->filter(fn ($r) => ($r['reply_received_count'] ?? 0) > 0);
+            } elseif ($filters['reply_status'] === 'pending') {
+                $rows = $rows->filter(fn ($r) => ($r['reply_pending_count'] ?? 0) > 0
+                    || ($r['missing_bank_count'] ?? 0) > 0
+                    || ($r['bank_count'] ?? 0) === 0);
+            }
+        }
+
+        return $rows->values();
+    }
+
+    /**
      * Firma gönderim durumu raporu (yıl bazlı, manuel dahil).
      * Her firma için: banka sayısı, sistemden gönderilen, manuel giriş sayısı, durum.
      *

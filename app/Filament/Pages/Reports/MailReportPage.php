@@ -19,8 +19,8 @@ class MailReportPage extends Page implements HasForms
     use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
-    protected static ?string $navigationLabel = 'Firma – Banka Bazlı Mail Raporu';
-    protected static ?string $title = 'Firma – Banka Bazlı Mail Raporu';
+    protected static ?string $navigationLabel = 'Firma Bazlı Mail Raporu';
+    protected static ?string $title = 'Firma Bazlı Mail Raporu';
     protected static ?string $navigationGroup = 'Raporlar';
     protected static ?int $navigationSort = 3;
     protected static string $view = 'filament.pages.reports.mail-report-page';
@@ -155,7 +155,7 @@ class MailReportPage extends Page implements HasForms
         try {
             $perPage = max(1, min(100, $this->perPage));
             $page = max(1, $this->page);
-            $paginator = $reportService->getMergedMailReportPaginated(
+            $paginator = $reportService->getMergedMailReportByFirmPaginated(
                 $this->filters,
                 $perPage,
                 $page
@@ -202,7 +202,7 @@ class MailReportPage extends Page implements HasForms
                 ->color('success')
                 ->action(function (): StreamedResponse {
                     $reportService = app(MutabakatReportService::class);
-                    $paginator = $reportService->getMergedMailReportPaginated($this->filters, 50000, 1);
+                    $paginator = $reportService->getMergedMailReportByFirmPaginated($this->filters, 50000, 1);
                     $items = $paginator->items();
                     $rows = is_array($items) ? $items : collect($items)->all();
                     return (new MailReportExport($rows))->export();
