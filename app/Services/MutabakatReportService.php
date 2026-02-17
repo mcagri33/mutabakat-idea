@@ -61,7 +61,7 @@ class MutabakatReportService
      */
     public function getMailReportRowsByFirm(?int $year = null): array
     {
-        $year = $year ?? now()->year;
+        $year = $year ?? now()->year - 1;
         $filters = ['year' => $year];
         $paginator = $this->getMergedMailReportByFirmPaginated($filters, 50000, 1);
 
