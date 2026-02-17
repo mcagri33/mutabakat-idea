@@ -16,8 +16,8 @@ class ReconciliationRequestResource extends Resource
     protected static ?string $model = ReconciliationRequest::class;
 
     protected static ?string $navigationGroup = 'Mutabakat Yönetimi';
-    protected static ?string $navigationLabel = 'Mutabakat Talepleri';
-    protected static ?string $pluralLabel = 'Mutabakat Talepleri';
+    protected static ?string $navigationLabel = 'BankaMutabakat Talepleri';
+    protected static ?string $pluralLabel = 'Banka Mutabakat Talepleri';
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
 
     public static function getEloquentQuery(): Builder
