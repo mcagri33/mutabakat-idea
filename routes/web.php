@@ -1,6 +1,12 @@
 <?php
 
+use App\Http\Controllers\CariMutabakatReplyController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/cari-mutabakat/cevapla/{token}', [CariMutabakatReplyController::class, 'show'])
+    ->name('cari-mutabakat.reply');
+Route::post('/cari-mutabakat/cevapla/{token}', [CariMutabakatReplyController::class, 'store'])
+    ->name('cari-mutabakat.reply.store');
 
 Route::get('/sync-customers', function () {
     try {

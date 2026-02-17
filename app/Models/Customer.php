@@ -33,4 +33,10 @@ class Customer extends Model
     {
         return $this->hasMany(ReconciliationRequest::class);
     }
+
+    /** Cari mutabakat talepleri */
+    public function cariMutabakatRequests()
+    {
+        return $this->hasMany(CariMutabakatRequest::class);
+    }
 }
