@@ -207,6 +207,27 @@ class MutabakatReportService
                     ]);
                 }
             }
+
+            $customersWithoutBanks = Customer::query()
+                ->where('is_active', true)
+                ->whereDoesntHave('banks')
+                ->when(! empty($filters['customer_id']), fn ($q) => $q->where('id', $filters['customer_id']))
+                ->orderBy('name')
+                ->get();
+
+            foreach ($customersWithoutBanks as $customer) {
+                $missingRows->push([
+                    'customer_name'      => $customer->name ?? '-',
+                    'bank_name'          => 'Banka eklenmemiş',
+                    'year'               => (string) $yearForMissing,
+                    'mail_sent_at'       => '-',
+                    'mail_status'        => 'pending',
+                    'reply_status'       => 'pending',
+                    'reply_received_at'  => '-',
+                    'source'             => 'banka_eklenmemis',
+                    'sort_at'            => '',
+                ]);
+            }
         }
 
         $merged = $systemRows->concat($manualRows)->concat($missingRows)->sortByDesc('sort_at')->values();

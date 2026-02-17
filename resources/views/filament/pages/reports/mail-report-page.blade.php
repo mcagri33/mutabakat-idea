@@ -9,7 +9,7 @@
         <div class="fi-section overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
             <div class="p-6 sm:p-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Firma – Banka Bazlı Mail Raporu</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gönderilen mutabakat mailleri, gönderim tarihi, cevap durumu ve banka maili gelmemiş firmalar.</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gönderilen mutabakat mailleri, gönderim tarihi, cevap durumu, banka maili gelmemiş ve banka eklenmemiş firmalar.</p>
             </div>
 
             <div class="px-4 sm:px-6 py-2 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 bg-gray-50/50 dark:bg-gray-800/50">
@@ -80,11 +80,13 @@
                                                 $srcLabel = match ($src) {
                                                     'manuel' => 'Manuel',
                                                     'banka_maili_gelmemis' => 'Banka Maili Gelmedi',
+                                                    'banka_eklenmemis' => 'Banka Eklenmemiş',
                                                     default => 'Sistem',
                                                 };
                                                 $srcColor = match ($src) {
                                                     'manuel' => 'warning',
                                                     'banka_maili_gelmemis' => 'danger',
+                                                    'banka_eklenmemis' => 'gray',
                                                     default => 'primary',
                                                 };
                                             @endphp

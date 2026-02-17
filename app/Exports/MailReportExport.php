@@ -59,6 +59,7 @@ class MailReportExport
             $source = match ($r['source'] ?? 'sistem') {
                 'manuel' => 'Manuel',
                 'banka_maili_gelmemis' => 'Banka Maili Gelmedi',
+                'banka_eklenmemis' => 'Banka Eklenmemiş',
                 default => 'Sistem',
             };
             $sheet->setCellValue('A' . $row, $r['customer_name'] ?? '-');
