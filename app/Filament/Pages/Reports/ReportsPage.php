@@ -243,7 +243,7 @@ class ReportsPage extends Page implements HasForms
         try {
             $service = app(MutabakatReportService::class);
             $customersWithoutBanks = $service->getCustomersWithoutBanks();
-            $mailReportRows = $service->getMailReportRows();
+            $mailReportRows = $service->getMailReportRowsByFirm(now()->year);
 
             $mailable = new MutabakatRaporuMailable($customersWithoutBanks, $mailReportRows);
             Mail::to($emails->toArray())->send($mailable);
