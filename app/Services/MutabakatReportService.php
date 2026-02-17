@@ -54,6 +54,21 @@ class MutabakatReportService
     }
 
     /**
+     * Firma bazlı mail raporu satırları (haftalık mail için).
+     * getMergedMailReportByFirmPaginated ile aynı yapı, sayfalama yok.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getMailReportRowsByFirm(?int $year = null): array
+    {
+        $year = $year ?? now()->year;
+        $filters = ['year' => $year];
+        $paginator = $this->getMergedMailReportByFirmPaginated($filters, 50000, 1);
+
+        return $paginator->items();
+    }
+
+    /**
      * Firma–banka mail raporu için sayfalı ve filtrelenebilir sorgu.
      *
      * @param array{customer_id?: int|null, year?: int|null, mail_status?: string|null, reply_status?: string|null} $filters

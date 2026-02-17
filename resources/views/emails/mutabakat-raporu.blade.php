@@ -53,64 +53,50 @@
     <p><strong>Toplam: {{ $customersWithoutBanks->count() }}</strong> firma</p>
 @endif
 
-<h2>2. Firma – Banka Bazlı Mail Raporu</h2>
-<p>Gönderilen mutabakat mailleri, gönderim tarihi ve cevap durumu.</p>
+<h2>2. Firma Bazlı Mail Raporu</h2>
+<p>Firmaların gönderim durumu, bankadan cevap durumu ve özet bilgileri.</p>
 @if(empty($mailReportRows))
-    <p class="empty">Henüz mail kaydı bulunmuyor.</p>
+    <p class="empty">Henüz firma kaydı bulunmuyor.</p>
 @else
     <table>
         <thead>
             <tr>
                 <th>Firma</th>
-                <th>Banka</th>
                 <th>Yıl</th>
-                <th>Gönderim Tarihi</th>
-                <th>Mail Durumu</th>
-                <th>Cevap Durumu</th>
-                <th>Cevap Tarihi</th>
+                <th>Gönderildi</th>
+                <th>Bankadan Cevap Geldi</th>
+                <th>Bankadan Cevap Bekliyor</th>
+                <th>Durum / Özet</th>
             </tr>
         </thead>
         <tbody>
             @foreach($mailReportRows as $row)
             <tr>
                 <td>{{ $row['customer_name'] ?? '-' }}</td>
-                <td>{{ $row['bank_name'] ?? '-' }}</td>
                 <td>{{ $row['year'] ?? '-' }}</td>
-                <td>{{ $row['mail_sent_at'] ?? '-' }}</td>
                 <td>
                     @php
-                        $mailStatus = $row['mail_status'] ?? 'pending';
-                        $mailLabel = match($mailStatus) {
-                            'sent' => 'Gönderildi',
-                            'failed' => 'Hata',
-                            default => 'Beklemede',
-                        };
-                        $mailClass = match($mailStatus) {
-                            'sent' => 'badge-sent',
-                            'failed' => 'badge-failed',
-                            default => 'badge-pending',
-                        };
+                        $sent = $row['sent_count'] ?? 0;
+                        $manual = $row['manual_count'] ?? 0;
                     @endphp
-                    <span class="badge {{ $mailClass }}">{{ $mailLabel }}</span>
+                    @if($sent > 0 && $manual > 0)
+                        {{ $sent }} banka + {{ $manual }} manuel
+                    @elseif($sent > 0)
+                        {{ $sent }} banka
+                    @elseif($manual > 0)
+                        {{ $manual }} manuel
+                    @else
+                        -
+                    @endif
                 </td>
-                <td>
-                    @php
-                        $replyStatus = $row['reply_status'] ?? 'pending';
-                        $replyLabel = match($replyStatus) {
-                            'received' => 'Geldi',
-                            'completed' => 'Tamamlandı',
-                            default => 'Beklemede',
-                        };
-                        $replyClass = in_array($replyStatus, ['received', 'completed']) ? 'badge-received' : 'badge-pending';
-                    @endphp
-                    <span class="badge {{ $replyClass }}">{{ $replyLabel }}</span>
-                </td>
-                <td>{{ $row['reply_received_at'] ?? '-' }}</td>
+                <td>{{ ($row['reply_received_count'] ?? 0) > 0 ? ($row['reply_received_count'] . ' banka') : '-' }}</td>
+                <td>{{ ($row['reply_pending_count'] ?? 0) > 0 ? ($row['reply_pending_count'] . ' banka') : '-' }}</td>
+                <td>{{ $row['summary'] ?? '-' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
-    <p><strong>Toplam: {{ count($mailReportRows) }}</strong> kayıt</p>
+    <p><strong>Toplam: {{ count($mailReportRows) }}</strong> firma</p>
 @endif
 
 <hr style="margin-top: 30px; border: none; border-top: 1px solid #ddd;">

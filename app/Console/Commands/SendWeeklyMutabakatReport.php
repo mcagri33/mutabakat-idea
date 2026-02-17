@@ -36,7 +36,7 @@ class SendWeeklyMutabakatReport extends Command
 
         try {
             $customersWithoutBanks = $reportService->getCustomersWithoutBanks();
-            $mailReportRows = $reportService->getMailReportRows();
+            $mailReportRows = $reportService->getMailReportRowsByFirm(now()->year);
 
             $mailable = new MutabakatRaporuMailable($customersWithoutBanks, $mailReportRows);
             Mail::to($emails->toArray())->send($mailable);

@@ -20,8 +20,9 @@ class MutabakatRaporuMailable extends Mailable
     public $customersWithoutBanks;
 
     /**
-     * Firma-banka bazlı mail raporu satırları
-     * Her eleman: ['customer_name', 'bank_name', 'year', 'mail_sent_at', 'mail_status', 'reply_status', 'reply_received_at']
+     * Firma bazlı mail raporu satırları
+     * Her eleman: ['customer_name', 'year', 'sent_count', 'manual_count',
+     *              'reply_received_count', 'reply_pending_count', 'summary']
      *
      * @var array<int, array<string, mixed>>
      */
