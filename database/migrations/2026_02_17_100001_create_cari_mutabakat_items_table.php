@@ -24,7 +24,7 @@ return new class extends Migration
             $table->decimal('bakiye', 18, 2)->default(0);
             $table->string('pb', 10)->nullable(); // TL, USD, EUR
             $table->decimal('karsiligi', 18, 2)->nullable();
-            $table->string('token', 64')->unique()->nullable();
+            $table->string('token', 64)->unique()->nullable();
             $table->enum('reply_status', ['pending', 'received', 'completed'])->default('pending');
             $table->timestamp('reply_received_at')->nullable();
             $table->timestamps();
