@@ -27,33 +27,7 @@
     Rapor tarihi: <strong>{{ $reportDate }}</strong>
 </div>
 
-<h2>1. Bankası Eklenmemiş Firmalar</h2>
-<p>Aşağıdaki firmalara henüz banka tanımı eklenmemiştir.</p>
-@if($customersWithoutBanks->isEmpty())
-    <p class="empty">Tüm firmalarda en az bir banka tanımlı.</p>
-@else
-    <table>
-        <thead>
-            <tr>
-                <th>Firma Adı</th>
-                <th>E-posta</th>
-                <th>Telefon</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($customersWithoutBanks as $customer)
-            <tr>
-                <td>{{ $customer->name }}</td>
-                <td>{{ $customer->email ?? '-' }}</td>
-                <td>{{ $customer->phone ?? '-' }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-    <p><strong>Toplam: {{ $customersWithoutBanks->count() }}</strong> firma</p>
-@endif
-
-<h2>2. Firma Bazlı Mail Raporu</h2>
+<h2>Firma Bazlı Mail Raporu</h2>
 <p>Firmaların gönderim durumu, bankadan cevap durumu ve özet bilgileri.</p>
 @if(empty($mailReportRows))
     <p class="empty">Henüz firma kaydı bulunmuyor.</p>
