@@ -23,7 +23,7 @@ class CariMutabakatRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['customer', 'items']);
+        return parent::getEloquentQuery()->with(['customer', 'items.reply']);
     }
 
     public static function form(Form $form): Form

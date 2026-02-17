@@ -47,6 +47,7 @@ class ItemsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('reply'))
             ->recordTitleAttribute('unvan')
             ->columns([
                 Tables\Columns\TextColumn::make('cari_kodu')->label('Cari Kodu'),
@@ -54,7 +55,25 @@ class ItemsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('email')->label('E-Posta'),
                 Tables\Columns\TextColumn::make('tarih')->label('Tarih')->date('d.m.Y'),
                 Tables\Columns\TextColumn::make('bakiye_tipi')->label('B/A'),
-                Tables\Columns\TextColumn::make('bakiye')->label('Bakiye')->numeric(decimalPlaces: 2),
+                Tables\Columns\TextColumn::make('bakiye')
+                    ->label('Bakiye')
+                    ->formatStateUsing(fn ($record) => $record
+                        ? number_format($record->bakiye ?? 0, 2, ',', '.') . ' ' . ($record->pb ?? 'TL')
+                        : '-'),
+                Tables\Columns\TextColumn::make('reply.cevap')
+                    ->label('Durum')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'mutabıkız' => 'Mutabıkız',
+                        'mutabık_değiliz' => 'Mutabık Değiliz',
+                        default => '-',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'mutabıkız' => 'success',
+                        'mutabık_değiliz' => 'danger',
+                        default => 'gray',
+                    })
+                    ->placeholder('-'),
                 Tables\Columns\TextColumn::make('mail_status')
                     ->label('Mail')
                     ->badge()
@@ -107,6 +126,42 @@ class ItemsRelationManager extends RelationManager
                             ->title('Mail kuyruğa alındı')
                             ->success()
                             ->send();
+                    }),
+                Tables\Actions\Action::make('downloadEkstre')
+                    ->label('Ekstre İndir')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->visible(fn ($record) => $record->reply?->ekstre_path)
+                    ->action(function ($record) {
+                        $path = $record->reply->ekstre_path;
+                        if (str_contains($path, '..')) {
+                            Notification::make()->title('Geçersiz yol')->danger()->send();
+                            return;
+                        }
+                        $fullPath = storage_path('app/public/' . $path);
+                        if (!file_exists($fullPath)) {
+                            Notification::make()->title('Dosya bulunamadı')->danger()->send();
+                            return;
+                        }
+                        return response()->download($fullPath, basename($path));
+                    }),
+                Tables\Actions\Action::make('downloadEImzaliForm')
+                    ->label('E-İmzalı Form İndir')
+                    ->icon('heroicon-o-document')
+                    ->color('gray')
+                    ->visible(fn ($record) => $record->reply?->e_imzali_form_path)
+                    ->action(function ($record) {
+                        $path = $record->reply->e_imzali_form_path;
+                        if (str_contains($path, '..')) {
+                            Notification::make()->title('Geçersiz yol')->danger()->send();
+                            return;
+                        }
+                        $fullPath = storage_path('app/public/' . $path);
+                        if (!file_exists($fullPath)) {
+                            Notification::make()->title('Dosya bulunamadı')->danger()->send();
+                            return;
+                        }
+                        return response()->download($fullPath, basename($path));
                     }),
                 Tables\Actions\EditAction::make(),
             ])
