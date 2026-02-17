@@ -11,19 +11,10 @@ class MutabakatDashboard extends Page
 
     protected static string $view = 'filament.pages.mutabakat-dashboard';
 
-    protected static ?string $navigationGroup = null;
-
-    protected static ?string $navigationLabel = null;
-
-    protected static ?int $navigationSort = null;
-
+    protected static ?string $navigationGroup = 'Ana Sayfa';
+    protected static ?string $navigationLabel = 'Dashboard';
+    protected static ?int $navigationSort = 0;
     protected static ?string $title = 'Mutabakat Dashboard';
-    
-    // Sayfa gizli - navigation'da görünmeyecek
-    public static function shouldRegisterNavigation(): bool
-    {
-        return false;
-    }
     
     // Lazy loading ile performansı artır
     protected static bool $isLazy = false;
@@ -39,6 +30,7 @@ class MutabakatDashboard extends Page
     {
         return [
             MutabakatWidgets\PendingRequestsTableWidget::class,
+            MutabakatWidgets\PendingCariRequestsTableWidget::class,
         ];
     }
 

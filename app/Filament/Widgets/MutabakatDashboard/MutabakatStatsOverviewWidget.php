@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets\MutabakatDashboard;
 
+use App\Models\CariMutabakatRequest;
+use App\Models\CariMutabakatItem;
 use App\Models\ReconciliationBank;
 use App\Models\ReconciliationRequest;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -32,8 +34,15 @@ class MutabakatStatsOverviewWidget extends BaseWidget
                 ')
                 ->first();
             
-            // Toplam Mutabakat Talebi
+            // Toplam Mutabakat Talebi (Banka)
             $totalRequests = ReconciliationRequest::whereYear('created_at', $currentYear)->count();
+
+            // Cari Mutabakat istatistikleri
+            $cariTotal = CariMutabakatRequest::whereYear('created_at', $currentYear)->count();
+            $cariItemsPending = CariMutabakatItem::whereHas('request', fn ($q) => $q->whereYear('created_at', $currentYear))
+                ->where('reply_status', 'pending')->count();
+            $cariItemsReceived = CariMutabakatItem::whereHas('request', fn ($q) => $q->whereYear('created_at', $currentYear))
+                ->whereIn('reply_status', ['received', 'completed'])->count();
             
             // Talep Durumları
             $statuses = ReconciliationRequest::whereYear('created_at', $currentYear)
@@ -87,6 +96,23 @@ class MutabakatStatsOverviewWidget extends BaseWidget
                     ->description('İşlem tamamlandı')
                     ->descriptionIcon('heroicon-m-check-badge')
                     ->color('primary'),
+
+                // CARİ MUTABAKAT
+                Stat::make('Cari Mutabakat Talebi', $cariTotal)
+                    ->description('Bu yıl')
+                    ->descriptionIcon('heroicon-m-users')
+                    ->color('info')
+                    ->url(route('filament.mutabakat.resources.cari-mutabakat-requests.index')),
+
+                Stat::make('Cari Bekleyen', $cariItemsPending)
+                    ->description('Cevap bekleniyor')
+                    ->descriptionIcon('heroicon-m-clock')
+                    ->color('warning'),
+
+                Stat::make('Cari Cevap Gelen', $cariItemsReceived)
+                    ->description('Alıcı/Satıcı cevabı')
+                    ->descriptionIcon('heroicon-m-check-circle')
+                    ->color('success'),
             ];
 
             // 3. TALEP DURUMLARI (sıralı - sadece 0'dan büyük olanlar)
