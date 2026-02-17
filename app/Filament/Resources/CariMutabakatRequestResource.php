@@ -120,6 +120,24 @@ class CariMutabakatRequestResource extends Resource
                     9 => 'Eylül', 10 => 'Ekim', 11 => 'Kasım', 12 => 'Aralık',
                 ][(int) $state] ?? $state : '-'),
                 Tables\Columns\TextColumn::make('items_count')->label('Satır')->counts('items')->sortable(),
+                Tables\Columns\TextColumn::make('mutabikiz_count')
+                    ->label('Mutabıkız')
+                    ->getStateUsing(fn ($record) => $record->items->filter(fn ($i) => $i->reply?->cevap === 'mutabıkız')->count())
+                    ->badge()
+                    ->color('success')
+                    ->alignCenter(),
+                Tables\Columns\TextColumn::make('mutabik_degiliz_count')
+                    ->label('Mutabık Değiliz')
+                    ->getStateUsing(fn ($record) => $record->items->filter(fn ($i) => $i->reply?->cevap === 'mutabık_değiliz')->count())
+                    ->badge()
+                    ->color('danger')
+                    ->alignCenter(),
+                Tables\Columns\TextColumn::make('bekleyen_count')
+                    ->label('Bekleyen')
+                    ->getStateUsing(fn ($record) => $record->items->where('reply_status', 'pending')->count())
+                    ->badge()
+                    ->color('warning')
+                    ->alignCenter(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Durum')
                     ->badge()
