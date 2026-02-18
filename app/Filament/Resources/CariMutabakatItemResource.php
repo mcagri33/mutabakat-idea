@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CariMutabakatItemResource\Pages;
 use App\Models\CariMutabakatItem;
+use App\Services\CariMutabakatPdfService;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -151,6 +152,48 @@ class CariMutabakatItemResource extends Resource
                             return;
                         }
                         return response()->download($fullPath, basename($path));
+                    }),
+                Tables\Actions\Action::make('generateCariGeriDonusPdf')
+                    ->label('PDF Oluştur')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('warning')
+                    ->visible(fn ($record) => $record->reply && !$record->reply->pdf_path)
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        try {
+                            $pdfService = app(CariMutabakatPdfService::class);
+                            $pdfPath = $pdfService->generatePdf($record->fresh());
+                            $record->reply->update(['pdf_path' => $pdfPath]);
+                            \Filament\Notifications\Notification::make()
+                                ->title('PDF oluşturuldu')
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('PDF oluşturulamadı')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Tables\Actions\Action::make('downloadCariGeriDonusPdf')
+                    ->label('Cari Geri Dönüş PDF')
+                    ->icon('heroicon-o-document-text')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->reply?->pdf_path)
+                    ->action(function ($record) {
+                        $path = $record->reply->pdf_path;
+                        if (str_contains($path, '..')) {
+                            \Filament\Notifications\Notification::make()->title('Geçersiz yol')->danger()->send();
+                            return;
+                        }
+                        $fullPath = \Illuminate\Support\Facades\Storage::disk('local')->path($path);
+                        if (!file_exists($fullPath)) {
+                            \Filament\Notifications\Notification::make()->title('PDF bulunamadı')->danger()->send();
+                            return;
+                        }
+                        $filename = 'Cari_Geri_Donus_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $record->unvan ?? 'item') . '.pdf';
+                        return response()->download($fullPath, $filename);
                     }),
                 Tables\Actions\Action::make('viewRequest')
                     ->label('Talep')

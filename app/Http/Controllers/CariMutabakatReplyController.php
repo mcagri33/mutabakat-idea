@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\CariMutabakatItem;
 use App\Models\CariMutabakatReply;
+use App\Services\CariMutabakatPdfService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\File;
 
@@ -52,7 +54,7 @@ class CariMutabakatReplyController extends Controller
             $eImzaliFormPath = $request->file('e_imzali_form')->store('cari-mutabakat-replies/' . $item->id, 'public');
         }
 
-        CariMutabakatReply::create([
+        $reply = CariMutabakatReply::create([
             'item_id' => $item->id,
             'cevap' => $validated['cevap'],
             'cevaplayan_unvan' => $validated['cevaplayan_unvan'] ?? null,
@@ -67,6 +69,18 @@ class CariMutabakatReplyController extends Controller
             'reply_status' => 'received',
             'reply_received_at' => now(),
         ]);
+
+        // PDF oluştur
+        try {
+            $pdfService = app(CariMutabakatPdfService::class);
+            $pdfPath = $pdfService->generatePdf($item->fresh());
+            $reply->update(['pdf_path' => $pdfPath]);
+        } catch (\Throwable $e) {
+            Log::error('Cari geri dönüş PDF oluşturulamadı', [
+                'item_id' => $item->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return view('cari-mutabakat.thank-you', compact('item'));
     }

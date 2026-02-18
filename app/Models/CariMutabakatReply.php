@@ -16,6 +16,7 @@ class CariMutabakatReply extends Model
         'aciklama',
         'ekstre_path',
         'e_imzali_form_path',
+        'pdf_path',
         'replied_at',
     ];
 

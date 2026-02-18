@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CariMutabakatRequestResource\RelationManagers;
 
 use App\Jobs\SendCariMutabakatMailJob;
+use App\Services\CariMutabakatPdfService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -162,6 +163,50 @@ class ItemsRelationManager extends RelationManager
                             return;
                         }
                         return response()->download($fullPath, basename($path));
+                    }),
+                Tables\Actions\Action::make('generateCariGeriDonusPdf')
+                    ->label('PDF Oluştur')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('warning')
+                    ->visible(fn ($record) => $record->reply && !$record->reply->pdf_path)
+                    ->requiresConfirmation()
+                    ->modalHeading('Cari Geri Dönüş PDF Oluştur')
+                    ->modalDescription('Bu cevap için PDF oluşturulacak. LibreOffice kurulu olmalıdır.')
+                    ->action(function ($record) {
+                        try {
+                            $pdfService = app(CariMutabakatPdfService::class);
+                            $pdfPath = $pdfService->generatePdf($record->fresh());
+                            $record->reply->update(['pdf_path' => $pdfPath]);
+                            Notification::make()
+                                ->title('PDF oluşturuldu')
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('PDF oluşturulamadı')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Tables\Actions\Action::make('downloadCariGeriDonusPdf')
+                    ->label('Cari Geri Dönüş PDF')
+                    ->icon('heroicon-o-document-text')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->reply?->pdf_path)
+                    ->action(function ($record) {
+                        $path = $record->reply->pdf_path;
+                        if (str_contains($path, '..')) {
+                            Notification::make()->title('Geçersiz yol')->danger()->send();
+                            return;
+                        }
+                        $fullPath = \Illuminate\Support\Facades\Storage::disk('local')->path($path);
+                        if (!file_exists($fullPath)) {
+                            Notification::make()->title('PDF bulunamadı')->danger()->send();
+                            return;
+                        }
+                        $filename = 'Cari_Geri_Donus_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $record->unvan ?? 'item') . '.pdf';
+                        return response()->download($fullPath, $filename);
                     }),
                 Tables\Actions\EditAction::make(),
             ])
