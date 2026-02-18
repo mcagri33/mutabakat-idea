@@ -101,6 +101,8 @@ class FirmalaraMailGonderPage extends Page implements HasForms
                                 'application/pdf',
                                 'application/msword',
                                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                'application/vnd.ms-excel',
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                 'image/png',
                                 'image/jpeg',
                                 'image/jpg',
@@ -108,7 +110,7 @@ class FirmalaraMailGonderPage extends Page implements HasForms
                             ->maxSize(10240)
                             ->downloadable()
                             ->previewable()
-                            ->helperText('PDF, Word veya resim. Maks. 10MB/dosya.')
+                            ->helperText('PDF, Word, Excel veya resim. Maks. 10MB/dosya.')
                             ->columnSpanFull(),
                     ])
                     ->collapsible()
