@@ -51,6 +51,7 @@ class CariMutabakatItemResource extends Resource
                 Tables\Columns\TextColumn::make('unvan')->label('Ünvan')->searchable(),
                 Tables\Columns\TextColumn::make('email')->label('E-Posta')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('tarih')->label('Tarih')->date('d.m.Y'),
+                Tables\Columns\TextColumn::make('request.year')->label('Dönem')->formatStateUsing(fn ($record) => $record && $record->request ? '31.12.' . $record->request->year : '-'),
                 Tables\Columns\TextColumn::make('bakiye_tipi')->label('B/A'),
                 Tables\Columns\TextColumn::make('bakiye')
                     ->label('Bakiye')

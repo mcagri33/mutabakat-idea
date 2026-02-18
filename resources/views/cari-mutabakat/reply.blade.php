@@ -32,7 +32,8 @@
         <table class="info-table">
             <tr><th>Ünvan</th><td>{{ $item->unvan }}</td></tr>
             <tr><th>Cari Kodu</th><td>{{ $item->cari_kodu }}</td></tr>
-            <tr><th>Tarih</th><td>{{ $item->tarih?->format('d.m.Y') ?? '-' }}</td></tr>
+            <tr><th>Tarih</th><td>{{ $item->tarih?->format('d.m.Y') ?? now()->format('d.m.Y') }}</td></tr>
+            <tr><th>Mutabakat Dönemi</th><td>31.12.{{ $item->request->year ?? now()->year }}</td></tr>
             <tr><th>Bakiye</th><td>{{ number_format($item->bakiye ?? 0, 2, ',', '.') }} {{ $item->pb ?? 'TL' }} ({{ $item->bakiye_tipi }})</td></tr>
         </table>
 
@@ -50,11 +51,6 @@
             <div class="form-group">
                 <label>Cevaplayan Ünvan</label>
                 <input type="text" name="cevaplayan_unvan" value="{{ old('cevaplayan_unvan', $item->unvan) }}" placeholder="Örn: ABC Ltd. Şti.">
-            </div>
-
-            <div class="form-group">
-                <label>Cevaplayan Vergi No</label>
-                <input type="text" name="cevaplayan_vergi_no" value="{{ old('cevaplayan_vergi_no') }}" placeholder="Vergi numarası">
             </div>
 
             <div class="form-group">

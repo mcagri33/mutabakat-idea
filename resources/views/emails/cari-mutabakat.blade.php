@@ -27,13 +27,15 @@
             <th style="text-align: left;">Cari Kodu</th>
             <th style="text-align: left;">Ünvan</th>
             <th style="text-align: left;">Tarih</th>
+            <th style="text-align: left;">Mutabakat Dönemi</th>
             <th style="text-align: right;">Bakiye Tipi</th>
             <th style="text-align: right;">Bakiye</th>
         </tr>
         <tr>
             <td>{{ $item->cari_kodu }}</td>
             <td>{{ $item->unvan }}</td>
-            <td>{{ $item->tarih?->format('d.m.Y') ?? '-' }}</td>
+            <td>{{ $item->tarih?->format('d.m.Y') ?? now()->format('d.m.Y') }}</td>
+            <td>31.12.{{ $item->request?->year ?? now()->year }}</td>
             <td style="text-align: right;">{{ $item->bakiye_tipi }}</td>
             <td style="text-align: right;">{{ number_format($item->bakiye ?? 0, 2, ',', '.') }} {{ $item->pb ?? 'TL' }}</td>
         </tr>

@@ -12,7 +12,6 @@ class CariMutabakatPdfService
 {
     protected array $ideaBilgileri = [
         'unvan' => 'İDEA BAĞIMSIZ DENETİM A.Ş.',
-        'vergi_no' => '4700620239',
         'telefon' => '(224) 261-1530',
         'ilgili_kisi' => '',
     ];
@@ -39,15 +38,15 @@ class CariMutabakatPdfService
 
         $request = $item->request;
         $year = $request->year ?? now()->year;
-        $month = $request->month ?? 12;
-        $repliedAt = $reply->replied_at?->format('d.m.Y H:i:s') ?? '-';
+        $donem = '31.12.' . $year;
+        $mutabakatTarihi = $reply->replied_at?->format('d.m.Y H:i:s') ?? '-';
         $onaylayanKisi = $reply->cevaplayan_unvan ?? $item->email ?? '-';
         $onayDurumu = $reply->cevap === 'mutabıkız' ? 'onaylı (web-sistem)' : 'onaylanmadı';
         $musteriSaticiKodu = $item->cari_kodu ?? $item->referans ?? '-';
+        $eImzaliFormDurum = $reply->e_imzali_form_path ? 'Yüklendi' : '-';
 
         // Gönderen (İDEA)
         $section->addText('Gönderen: ' . $this->ideaBilgileri['unvan']);
-        $section->addText('Vergi No: ' . $this->ideaBilgileri['vergi_no']);
         $section->addText('Telefon: ' . $this->ideaBilgileri['telefon']);
         if ($this->ideaBilgileri['ilgili_kisi']) {
             $section->addText('İlgili Kişi: ' . $this->ideaBilgileri['ilgili_kisi']);
@@ -56,19 +55,19 @@ class CariMutabakatPdfService
 
         // Alıcı
         $section->addText('Alıcı: ' . ($item->unvan ?? '-'));
-        $section->addText('Vergi No: ' . ($reply->cevaplayan_vergi_no ?? $item->vergi_no ?? '-'));
         $section->addText('Telefon: ' . ($item->tel_no ?? '-'));
         $section->addTextBreak(1);
 
         // Konu
         $section->addText('Konu: ' . $year . ' Dönemi Cari Hesap Mutabakatı');
-        $section->addText('Gönderim Tarihi: ' . $repliedAt);
+        $section->addText('Mutabakat Dönemi: ' . $donem);
+        $section->addText('Tarih: ' . ($item->tarih?->format('d.m.Y') ?? '-'));
         $section->addTextBreak(1);
 
         // Mutabakat Bilgileri
         $section->addText('Mutabakat Bilgileri', ['bold' => true]);
         $this->addLabelValueRows($section, [
-            ['Mutabakat Dönemi', $year . ' / ' . $month],
+            ['Mutabakat Dönemi', $donem],
             ['Müşteri-Satıcı Kodu', $musteriSaticiKodu],
             ['Tutar', $this->formatBakiye($item)],
             ['Borç/Alacak', $item->bakiye_tipi ?? '-'],
@@ -80,9 +79,10 @@ class CariMutabakatPdfService
         $this->addLabelValueRows($section, [
             ['Onay Durumu', $onayDurumu],
             ['Mutabakat Gönderen Kişi', ''],
-            ['Mutabakat Gönderim Tarihi', $repliedAt],
+            ['Mutabakat Dönemi', $donem],
             ['Onaylayan Kişi', $onaylayanKisi],
-            ['Onay Tarihi', $repliedAt],
+            ['Onay Tarihi', $mutabakatTarihi],
+            ['E-imzalı Form', $eImzaliFormDurum],
         ]);
         $section->addTextBreak(1);
 

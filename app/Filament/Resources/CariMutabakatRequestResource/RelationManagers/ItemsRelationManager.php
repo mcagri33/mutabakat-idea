@@ -30,8 +30,6 @@ class ItemsRelationManager extends RelationManager
             Forms\Components\TextInput::make('email')->label('E-Posta')->email()->required(),
             Forms\Components\TextInput::make('cc_email')->label('CC E-Posta')->email(),
             Forms\Components\TextInput::make('tel_no')->label('Tel No'),
-            Forms\Components\TextInput::make('vergi_no')->label('Vergi No'),
-            Forms\Components\DatePicker::make('tarih')->label('Tarih')->required()->default(now()),
             Forms\Components\Select::make('bakiye_tipi')
                 ->label('B/A')
                 ->options(['Borç' => 'Borç', 'Alacak' => 'Alacak'])
@@ -55,6 +53,7 @@ class ItemsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('unvan')->label('Ünvan')->searchable(),
                 Tables\Columns\TextColumn::make('email')->label('E-Posta'),
                 Tables\Columns\TextColumn::make('tarih')->label('Tarih')->date('d.m.Y'),
+                Tables\Columns\TextColumn::make('request.year')->label('Dönem')->formatStateUsing(fn ($record) => $record && $record->request ? '31.12.' . $record->request->year : '-'),
                 Tables\Columns\TextColumn::make('bakiye_tipi')->label('B/A'),
                 Tables\Columns\TextColumn::make('bakiye')
                     ->label('Bakiye')
@@ -107,7 +106,9 @@ class ItemsRelationManager extends RelationManager
                     }),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()->label('Satır Ekle'),
+                Tables\Actions\CreateAction::make()
+                    ->label('Satır Ekle')
+                    ->mutateFormDataUsing(fn (array $data): array => array_merge($data, ['tarih' => now()])),
             ])
             ->actions([
                 Tables\Actions\Action::make('sendMail')

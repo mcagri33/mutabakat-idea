@@ -83,8 +83,6 @@ class CariMutabakatRequestResource extends Resource
                                 Forms\Components\TextInput::make('email')->label('E-Posta')->email()->required(),
                                 Forms\Components\TextInput::make('cc_email')->label('CC E-Posta')->email(),
                                 Forms\Components\TextInput::make('tel_no')->label('Tel No'),
-                                Forms\Components\TextInput::make('vergi_no')->label('Vergi No'),
-                                Forms\Components\DatePicker::make('tarih')->label('Tarih')->required()->default(now()),
                                 Forms\Components\Select::make('bakiye_tipi')
                                     ->label('B/A')
                                     ->options(['Borç' => 'Borç', 'Alacak' => 'Alacak'])
