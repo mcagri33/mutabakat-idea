@@ -67,12 +67,6 @@
                 @error('ekstre')<span class="error">{{ $message }}</span>@enderror
             </div>
 
-            <div class="form-group">
-                <label>E-İmzalı Form (PDF, JPG, PNG - max 5MB)</label>
-                <input type="file" name="e_imzali_form" accept=".pdf,.jpg,.jpeg,.png">
-                @error('e_imzali_form')<span class="error">{{ $message }}</span>@enderror
-            </div>
-
             <button type="submit" class="btn">Gönder</button>
         </form>
 
