@@ -13,7 +13,7 @@
     <p>Sayın {{ $item->unvan }},</p>
 
     <p style="line-height: 1.6;">
-        <strong>{{ $customer->name }}</strong> şirketinin 31.12.{{ $request->year }} yılı hesaplarına ilişkin
+        <strong>{{ $customer->name }}</strong> şirketinin <strong>31.12.{{ $request->year }}</strong> yılı hesaplarına ilişkin
         cari hesap mutabakatı sürecinde sizinle iletişime geçmekteyiz.
     </p>
 
