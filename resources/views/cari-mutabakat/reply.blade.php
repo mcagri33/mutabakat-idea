@@ -27,7 +27,7 @@
 <body>
     <div class="container">
         <h1>Cari Hesap Mutabakatı</h1>
-        <h1>{{ $item->request->customer->name }} - 31.12.{{ $item->request->year }} Yılı</h1>
+        <h2>{{ $item->request->customer->name }} - 31.12.{{ $item->request->year }} Yılı</h2>
 
         <table class="info-table">
             <tr><th>Ünvan</th><td>{{ $item->unvan }}</td></tr>
