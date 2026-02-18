@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cari Hesap Mutabakat Cevabı</title>
+    <title>Cari Hesap Mutabakatı</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; font-size: 14px; color: #333; margin: 0; padding: 20px; background: #f5f5f5; }
@@ -26,8 +26,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>Cari Hesap Mutabakat Cevabı</h1>
-        <strong>{{ $item->request->customer->name }} - 31.12.{{ $item->request->year }} Yılı</strong>
+        <h1>Cari Hesap Mutabakatı</h1>
+        <h1>{{ $item->request->customer->name }} - 31.12.{{ $item->request->year }} Yılı</h1>
 
         <table class="info-table">
             <tr><th>Ünvan</th><td>{{ $item->unvan }}</td></tr>
