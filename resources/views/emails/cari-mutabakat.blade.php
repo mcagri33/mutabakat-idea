@@ -30,6 +30,7 @@
             <th style="text-align: left;">Mutabakat Dönemi</th>
             <th style="text-align: right;">Bakiye Tipi</th>
             <th style="text-align: right;">Bakiye</th>
+            <th style="text-align: right;">Karşılığı</th>
         </tr>
         <tr>
             <td>{{ $item->cari_kodu }}</td>
@@ -38,6 +39,7 @@
             <td>31.12.{{ $item->request?->year ?? now()->year }}</td>
             <td style="text-align: right;">{{ $item->bakiye_tipi }}</td>
             <td style="text-align: right;">{{ number_format($item->bakiye ?? 0, 2, ',', '.') }} {{ $item->pb ?? 'TL' }}</td>
+            <td style="text-align: right;">{{ ($item->karsiligi !== null && $item->karsiligi != 0) ? number_format($item->karsiligi, 2, ',', '.') . ' ' . ($item->karsiligi_pb ?? 'TRY') : '-' }}</td>
         </tr>
     </table>
 

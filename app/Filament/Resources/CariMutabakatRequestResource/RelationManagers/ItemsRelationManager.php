@@ -40,6 +40,7 @@ class ItemsRelationManager extends RelationManager
                 ->default(0),
             Forms\Components\TextInput::make('pb')->label('PB')->placeholder('TL')->default('TL'),
             Forms\Components\TextInput::make('karsiligi')->label('Karşılığı')->numeric(),
+            Forms\Components\TextInput::make('karsiligi_pb')->label('Karşılığı PB')->placeholder('TRY')->default('TRY'),
         ]);
     }
 
@@ -108,7 +109,10 @@ class ItemsRelationManager extends RelationManager
             ->headerActions([
                 Tables\Actions\CreateAction::make()
                     ->label('Satır Ekle')
-                    ->mutateFormDataUsing(fn (array $data): array => array_merge($data, ['tarih' => now()])),
+                    ->mutateFormDataUsing(fn (array $data): array => array_merge($data, [
+                    'tarih' => now(),
+                    'karsiligi_pb' => $data['karsiligi_pb'] ?? 'TRY',
+                ])),
             ])
             ->actions([
                 Tables\Actions\Action::make('sendMail')

@@ -43,6 +43,7 @@ class CreateCariMutabakatRequest extends CreateRecord
                 'bakiye' => $item['bakiye'] ?? 0,
                 'pb' => $item['pb'] ?? 'TL',
                 'karsiligi' => $item['karsiligi'] ?? null,
+                'karsiligi_pb' => $item['karsiligi_pb'] ?? 'TRY',
                 'token' => $hasValidEmail ? CariMutabakatItem::generateToken() : null,
             ]);
 

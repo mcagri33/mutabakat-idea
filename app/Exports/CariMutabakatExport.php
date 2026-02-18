@@ -35,6 +35,7 @@ class CariMutabakatExport
             'B/A',
             'Bakiye',
             'PB',
+            'Karşılığı',
             'Durum (Mutabıkız/Değiliz)',
             'Mail Durumu',
             'Cevap Durumu',
@@ -57,7 +58,7 @@ class CariMutabakatExport
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A1:R1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:T1')->applyFromArray($headerStyle);
 
         $monthNames = [
             1 => 'Ocak', 2 => 'Şubat', 3 => 'Mart', 4 => 'Nisan',
@@ -81,31 +82,34 @@ class CariMutabakatExport
             $sheet->setCellValue('I' . $row, $item->bakiye_tipi ?? '-');
             $sheet->setCellValue('J' . $row, $item->bakiye ?? 0);
             $sheet->setCellValue('K' . $row, $item->pb ?? 'TL');
-            $sheet->setCellValue('L' . $row, $reply ? match ($reply->cevap) {
+            $sheet->setCellValue('L' . $row, ($item->karsiligi !== null && $item->karsiligi != 0)
+                ? number_format((float) $item->karsiligi, 2, ',', '.') . ' ' . ($item->karsiligi_pb ?? 'TRY')
+                : '-');
+            $sheet->setCellValue('M' . $row, $reply ? match ($reply->cevap) {
                 'mutabıkız' => 'Mutabıkız',
                 'mutabık_değiliz' => 'Mutabık Değiliz',
                 default => '-',
             } : '-');
-            $sheet->setCellValue('M' . $row, match ($item->mail_status) {
+            $sheet->setCellValue('O' . $row, match ($item->mail_status) {
                 'pending' => 'Beklemede',
                 'sent' => 'Gönderildi',
                 'failed' => 'Hata',
                 default => '-',
             });
-            $sheet->setCellValue('N' . $row, match ($item->reply_status) {
+            $sheet->setCellValue('P' . $row, match ($item->reply_status) {
                 'pending' => 'Beklemede',
                 'received' => 'Geldi',
                 'completed' => 'Tamamlandı',
                 default => '-',
             });
-            $sheet->setCellValue('O' . $row, $reply && $reply->ekstre_path ? 'Var' : '-');
-            $sheet->setCellValue('P' . $row, $reply && $reply->e_imzali_form_path ? 'Var' : '-');
-            $sheet->setCellValue('Q' . $row, $reply?->cevaplayan_unvan ?? '-');
-            $sheet->setCellValue('R' . $row, $reply?->aciklama ?? '-');
+            $sheet->setCellValue('Q' . $row, $reply && $reply->ekstre_path ? 'Var' : '-');
+            $sheet->setCellValue('R' . $row, $reply && $reply->e_imzali_form_path ? 'Var' : '-');
+            $sheet->setCellValue('S' . $row, $reply?->cevaplayan_unvan ?? '-');
+            $sheet->setCellValue('T' . $row, $reply?->aciklama ?? '-');
             $row++;
         }
 
-        foreach (range('A', 'R') as $col) {
+        foreach (range('A', 'T') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 

@@ -35,6 +35,9 @@
             <tr><th>Tarih</th><td>{{ $item->tarih?->format('d.m.Y') ?? now()->format('d.m.Y') }}</td></tr>
             <tr><th>Mutabakat Dönemi</th><td>31.12.{{ $item->request->year ?? now()->year }}</td></tr>
             <tr><th>Bakiye</th><td>{{ number_format($item->bakiye ?? 0, 2, ',', '.') }} {{ $item->pb ?? 'TL' }} ({{ $item->bakiye_tipi }})</td></tr>
+            @if($item->karsiligi !== null && $item->karsiligi != 0)
+            <tr><th>Yabancı PB Karşılığı</th><td>{{ number_format($item->karsiligi, 2, ',', '.') }} {{ $item->karsiligi_pb ?? 'TRY' }}</td></tr>
+            @endif
         </table>
 
         <form action="{{ route('cari-mutabakat.reply.store', $item->token) }}" method="POST" enctype="multipart/form-data">

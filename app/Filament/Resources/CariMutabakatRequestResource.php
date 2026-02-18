@@ -93,6 +93,7 @@ class CariMutabakatRequestResource extends Resource
                                     ->default(0),
                                 Forms\Components\TextInput::make('pb')->label('PB')->placeholder('TL')->default('TL'),
                                 Forms\Components\TextInput::make('karsiligi')->label('Karşılığı')->numeric(),
+                                Forms\Components\TextInput::make('karsiligi_pb')->label('Karşılığı PB')->placeholder('TRY')->default('TRY'),
                             ])
                             ->columns(4)
                             ->defaultItems(1)

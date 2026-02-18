@@ -66,12 +66,16 @@ class CariMutabakatPdfService
 
         // Mutabakat Bilgileri
         $section->addText('Mutabakat Bilgileri', ['bold' => true]);
-        $this->addLabelValueRows($section, [
+        $rows = [
             ['Mutabakat Dönemi', $donem],
             ['Müşteri-Satıcı Kodu', $musteriSaticiKodu],
             ['Tutar', $this->formatBakiye($item)],
             ['Borç/Alacak', $item->bakiye_tipi ?? '-'],
-        ]);
+        ];
+        if ($item->karsiligi !== null && $item->karsiligi != 0) {
+            $rows[] = ['Yabancı PB Karşılığı', $this->formatKarsiligi($item)];
+        }
+        $this->addLabelValueRows($section, $rows);
         $section->addTextBreak(1);
 
         // Onay Bilgileri
@@ -136,6 +140,13 @@ class CariMutabakatPdfService
         $bakiye = $item->bakiye ?? 0;
         $pb = $item->pb ?? 'TRY';
         return number_format((float) $bakiye, 2, ',', '.') . ' ' . $pb;
+    }
+
+    protected function formatKarsiligi(CariMutabakatItem $item): string
+    {
+        $karsiligi = $item->karsiligi ?? 0;
+        $pb = $item->karsiligi_pb ?? 'TRY';
+        return number_format((float) $karsiligi, 2, ',', '.') . ' ' . $pb;
     }
 
     protected function convertToPdf(string $docxPath, string $outputDir): string

@@ -24,6 +24,7 @@ class CariMutabakatItem extends Model
         'bakiye',
         'pb',
         'karsiligi',
+        'karsiligi_pb',
         'token',
         'reply_status',
         'reply_received_at',
