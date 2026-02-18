@@ -40,9 +40,6 @@ class CariMutabakatMailService
         if ($item->cc_email && filter_var($item->cc_email, FILTER_VALIDATE_EMAIL)) {
             $ccAddresses[] = $item->cc_email;
         }
-        if ($customer->email && filter_var($customer->email, FILTER_VALIDATE_EMAIL) && !in_array($customer->email, $ccAddresses)) {
-            $ccAddresses[] = $customer->email;
-        }
 
         Mail::send('emails.cari-mutabakat', $viewData, function ($message) use ($item, $subject, $ccAddresses) {
             $message->from('mutabakat@mg.ideadocs.com.tr', 'Mutabakat Yönetim Sistemi');
