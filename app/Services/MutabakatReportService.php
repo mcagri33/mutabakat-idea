@@ -534,4 +534,20 @@ class MutabakatReportService
             'pageName' => 'page',
         ]);
     }
+
+    /**
+     * Firma gönderim durumu - tüm satırlar (filtreleme için).
+     */
+    public function getFirmSendingStatusRows(int $year, ?string $statusFilter = null): array
+    {
+        $paginator = $this->getFirmSendingStatusPaginated($year, 50000, 1);
+        $rows = $paginator->items();
+        $all = is_array($rows) ? $rows : collect($rows)->all();
+
+        if ($statusFilter) {
+            $all = array_values(array_filter($all, fn ($r) => ($r['status'] ?? '') === $statusFilter));
+        }
+
+        return $all;
+    }
 }
