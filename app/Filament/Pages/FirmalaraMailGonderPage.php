@@ -2,15 +2,14 @@
 
 namespace App\Filament\Pages;
 
+use App\Jobs\SendFirmCustomMailJob;
 use App\Models\Customer;
-use App\Services\FirmCustomMailService;
 use App\Services\MutabakatReportService;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Illuminate\Support\Facades\Log;
 
 class FirmalaraMailGonderPage extends Page implements HasForms
 {
@@ -198,8 +197,7 @@ class FirmalaraMailGonderPage extends Page implements HasForms
         }
 
         $customers = Customer::whereIn('id', $this->selectedCustomerIds)->get();
-        $mailService = app(FirmCustomMailService::class);
-        $sent = 0;
+        $queued = 0;
         $skipped = 0;
 
         foreach ($customers as $customer) {
@@ -207,28 +205,16 @@ class FirmalaraMailGonderPage extends Page implements HasForms
                 $skipped++;
                 continue;
             }
-            try {
-                $mailService->sendToCustomer($customer, $subject, $content, $this->year, $attachments);
-                $sent++;
-            } catch (\Throwable $e) {
-                Log::error('Firmalara mail gönderim hatası', [
-                    'customer_id' => $customer->id,
-                    'error' => $e->getMessage(),
-                ]);
-                Notification::make()
-                    ->title("Hata: {$customer->name}")
-                    ->body($e->getMessage())
-                    ->danger()
-                    ->send();
-            }
+            SendFirmCustomMailJob::dispatch($customer, $subject, $content, $this->year, $attachments);
+            $queued++;
         }
 
-        $msg = "{$sent} firmaya mail gönderildi.";
+        $msg = "{$queued} firma için mail kuyruğa alındı.";
         if ($skipped > 0) {
             $msg .= " {$skipped} firma atlandı (e-posta yok).";
         }
         Notification::make()
-            ->title('Mail gönderimi tamamlandı')
+            ->title('Mail kuyruğa alındı')
             ->body($msg)
             ->success()
             ->send();
