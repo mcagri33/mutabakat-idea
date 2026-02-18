@@ -13,7 +13,8 @@ class CariMutabakatPdfService
     protected array $ideaBilgileri = [
         'unvan' => 'İDEA BAĞIMSIZ DENETİM A.Ş.',
         'vergi_no' => '4700620239',
-        'adres' => '23 Nisan mahallesi, 241. Sk. Meriç Plaza D:22, PK. 16140 Nilüfer/Bursa',
+        'telefon' => '(224) 261-1530',
+        'ilgili_kisi' => '',
     ];
 
     public function generatePdf(CariMutabakatItem $item): string
@@ -36,61 +37,58 @@ class CariMutabakatPdfService
 
         $section = $phpWord->addSection(['marginTop' => 600, 'marginBottom' => 600]);
 
-        // Başlık
-        $section->addText('CARİ HESAP MUTABAKATI', ['bold' => true, 'size' => 14]);
-        $section->addTextBreak(1);
+        $request = $item->request;
+        $year = $request->year ?? now()->year;
+        $month = $request->month ?? 12;
+        $repliedAt = $reply->replied_at?->format('d.m.Y H:i:s') ?? '-';
+        $onaylayanKisi = $reply->cevaplayan_unvan ?? $item->email ?? '-';
+        $onayDurumu = $reply->cevap === 'mutabıkız' ? 'onaylı (web-sistem)' : 'onaylanmadı';
+        $musteriSaticiKodu = $item->cari_kodu ?? $item->referans ?? '-';
 
         // Gönderen (İDEA)
-        $section->addText('Gönderen', ['bold' => true]);
-        $section->addText($this->ideaBilgileri['unvan']);
+        $section->addText('Gönderen: ' . $this->ideaBilgileri['unvan']);
         $section->addText('Vergi No: ' . $this->ideaBilgileri['vergi_no']);
-        $section->addText('Adres: ' . $this->ideaBilgileri['adres']);
+        $section->addText('Telefon: ' . $this->ideaBilgileri['telefon']);
+        if ($this->ideaBilgileri['ilgili_kisi']) {
+            $section->addText('İlgili Kişi: ' . $this->ideaBilgileri['ilgili_kisi']);
+        }
         $section->addTextBreak(1);
 
-        $customer = $item->request->customer;
-        $referans = $item->referans ?? '-';
-
-        $section->addText('Referans No: ' . $referans);
+        // Alıcı
+        $section->addText('Alıcı: ' . ($item->unvan ?? '-'));
+        $section->addText('Vergi No: ' . ($reply->cevaplayan_vergi_no ?? $item->vergi_no ?? '-'));
+        $section->addText('Telefon: ' . ($item->tel_no ?? '-'));
         $section->addTextBreak(1);
 
-        // Mutabakat İçeriği
-        $section->addText('Mutabakat İçeriği:', ['bold' => true]);
+        // Konu
+        $section->addText('Konu: ' . $year . ' Dönemi Cari Hesap Mutabakatı');
+        $section->addText('Gönderim Tarihi: ' . $repliedAt);
         $section->addTextBreak(1);
 
-        $icerikData = [
-            ['Denetlenen Firma', $customer->company ?? $customer->name ?? '-'],
-            ['Vergi No', $item->vergi_no ?? '-'],
-            ['Adres', '-'],
-            ['Tarih', $item->tarih?->format('d.m.Y') ?? '-'],
-            ['Hesap Tipi', $item->hesap_tipi ?? '-'],
-            ['Cari Kod', $item->cari_kodu ?? '-'],
-            ['Ünvan', $item->unvan ?? '-'],
-            ['Bakiye Tipi', $item->bakiye_tipi ?? '-'],
-            ['Bakiye', $this->formatBakiye($item)],
-            ['Yabancı PB Karşılığı', $item->karsiligi ? number_format((float) $item->karsiligi, 2, ',', '.') : '-'],
-        ];
-
-        $this->addKeyValueTable($section, $icerikData);
+        // Mutabakat Bilgileri
+        $section->addText('Mutabakat Bilgileri', ['bold' => true]);
+        $this->addLabelValueRows($section, [
+            ['Mutabakat Dönemi', $year . ' / ' . $month],
+            ['Müşteri-Satıcı Kodu', $musteriSaticiKodu],
+            ['Tutar', $this->formatBakiye($item)],
+            ['Borç/Alacak', $item->bakiye_tipi ?? '-'],
+        ]);
         $section->addTextBreak(1);
 
-        // Mutabakat Cevabı
-        $section->addText('Mutabakat Cevabı:', ['bold' => true]);
+        // Onay Bilgileri
+        $section->addText('Onay Bilgileri', ['bold' => true]);
+        $this->addLabelValueRows($section, [
+            ['Onay Durumu', $onayDurumu],
+            ['Mutabakat Gönderen Kişi', ''],
+            ['Mutabakat Gönderim Tarihi', $repliedAt],
+            ['Onaylayan Kişi', $onaylayanKisi],
+            ['Onay Tarihi', $repliedAt],
+        ]);
         $section->addTextBreak(1);
 
-        $cevapLabel = $reply->cevap === 'mutabıkız' ? 'Mutabıkız' : 'Mutabık Değiliz';
-        $ekstreDurum = $reply->ekstre_path ? 'Yüklendi' : 'Yok';
-        $eImzaliDurum = $reply->e_imzali_form_path ? 'Yüklendi' : 'Yok';
-
-        $cevapData = [
-            ['Cevaplayan Firma', $reply->cevaplayan_unvan ?? '-'],
-            ['Vergi No', $reply->cevaplayan_vergi_no ?? '-'],
-            ['Cevap', $cevapLabel],
-            ['Açıklama', $reply->aciklama ?? '-'],
-            ['Ekstre Yükle', $ekstreDurum],
-            ['E-imzalı Form Yükle', $eImzaliDurum],
-        ];
-
-        $this->addKeyValueTable($section, $cevapData);
+        // Footer
+        $section->addText(now()->format('d.m.Y H:i') . "\t" . 'Ideadocs Portal');
+        $section->addText('www.ideadocs.com.tr');
 
         // Geçici DOCX kaydet
         $tempDocxName = 'cari_geri_donus_' . $item->id . '_' . time() . '.docx';
@@ -123,26 +121,21 @@ class CariMutabakatPdfService
         return $relativePath;
     }
 
+    protected function addLabelValueRows($section, array $rows): void
+    {
+        $table = $section->addTable(['borderSize' => 0]);
+        foreach ($rows as [$label, $value]) {
+            $table->addRow();
+            $table->addCell(3500)->addText($label);
+            $table->addCell(4500)->addText((string) $value);
+        }
+    }
+
     protected function formatBakiye(CariMutabakatItem $item): string
     {
         $bakiye = $item->bakiye ?? 0;
-        $pb = $item->pb ?? 'TL';
+        $pb = $item->pb ?? 'TRY';
         return number_format((float) $bakiye, 2, ',', '.') . ' ' . $pb;
-    }
-
-    protected function addKeyValueTable($section, array $data): void
-    {
-        $table = $section->addTable([
-            'borderSize' => 6,
-            'borderColor' => 'CCCCCC',
-            'cellMargin' => 50,
-        ]);
-
-        foreach ($data as [$key, $value]) {
-            $table->addRow();
-            $table->addCell(3000)->addText($key, ['bold' => true]);
-            $table->addCell(5000)->addText((string) $value);
-        }
     }
 
     protected function convertToPdf(string $docxPath, string $outputDir): string
