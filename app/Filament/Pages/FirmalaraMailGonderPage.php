@@ -30,6 +30,7 @@ class FirmalaraMailGonderPage extends Page implements HasForms
     public array $formData = [
         'subject' => '',
         'content' => '',
+        'attachments' => [],
         'filters' => ['year' => null, 'status' => ''],
     ];
 
@@ -91,6 +92,24 @@ class FirmalaraMailGonderPage extends Page implements HasForms
                             ->placeholder("İstediğiniz metni yazın. {firma_adi} kullanarak firma adını ekleyebilirsiniz.")
                             ->helperText('Placeholder: {firma_adi} = firma adı, {yil} = yıl')
                             ->columnSpanFull(),
+                        Forms\Components\FileUpload::make('attachments')
+                            ->label('Ek Dosyalar')
+                            ->disk('local')
+                            ->directory('firm_mail_attachments')
+                            ->multiple()
+                            ->acceptedFileTypes([
+                                'application/pdf',
+                                'application/msword',
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                'image/png',
+                                'image/jpeg',
+                                'image/jpg',
+                            ])
+                            ->maxSize(10240)
+                            ->downloadable()
+                            ->previewable()
+                            ->helperText('PDF, Word veya resim. Maks. 10MB/dosya.')
+                            ->columnSpanFull(),
                     ])
                     ->collapsible()
                     ->collapsed(false),
@@ -104,6 +123,7 @@ class FirmalaraMailGonderPage extends Page implements HasForms
         $this->formData = [
             'subject' => '',
             'content' => '',
+            'attachments' => [],
             'filters' => [
                 'year' => $this->year,
                 'status' => '',
@@ -159,6 +179,7 @@ class FirmalaraMailGonderPage extends Page implements HasForms
         $this->formData = $this->form->getState();
         $subject = $this->formData['subject'] ?? '';
         $content = $this->formData['content'] ?? '';
+        $attachments = $this->formData['attachments'] ?? [];
 
         \Illuminate\Support\Facades\Validator::make($this->formData, [
             'subject' => 'required|string|max:255',
@@ -185,7 +206,7 @@ class FirmalaraMailGonderPage extends Page implements HasForms
                 continue;
             }
             try {
-                $mailService->sendToCustomer($customer, $subject, $content, $this->year);
+                $mailService->sendToCustomer($customer, $subject, $content, $this->year, $attachments);
                 $sent++;
             } catch (\Throwable $e) {
                 Log::error('Firmalara mail gönderim hatası', [
