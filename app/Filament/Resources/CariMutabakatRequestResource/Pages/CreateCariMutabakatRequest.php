@@ -82,16 +82,8 @@ class CreateCariMutabakatRequest extends CreateRecord
                                 ->send();
                             return;
                         }
-                        $current = $this->form->getState()['items'] ?? [];
-                        // Boş satırları filtrele (cari_kodu, unvan, email zorunlu)
-                        $current = array_values(array_filter($current, function ($item) {
-                            $cariKodu = trim($item['cari_kodu'] ?? '');
-                            $unvan = trim($item['unvan'] ?? '');
-                            $email = trim($item['email'] ?? '');
-                            return ! empty($cariKodu) && ! empty($unvan) && ! empty($email);
-                        }));
-                        $merged = array_merge($current, $parsedItems);
-                        $this->form->fill(['items' => $merged]);
+                        // Import sırasında sadece Excel'den gelen veriyi kullan (boş satır riskini önler)
+                        $this->form->fill(['items' => $parsedItems]);
                         Notification::make()
                             ->title('Excel içe aktarıldı')
                             ->body(count($parsedItems) . ' satır eklendi.')

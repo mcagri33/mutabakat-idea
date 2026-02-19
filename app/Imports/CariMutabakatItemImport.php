@@ -40,9 +40,9 @@ class CariMutabakatItemImport
                     }
                 }
 
-                $cariKodu = $this->getValue($rowData, ['cari_kodu', 'cari kodu', 'cari']);
-                $unvan = $this->getValue($rowData, ['unvan', 'unvan']);
-                $email = $this->getValue($rowData, ['e_posta', 'e-posta', 'eposta', 'email', 'e_mail']);
+                $cariKodu = $this->getValue($rowData, ['cari_kodu', 'carikodu', 'cari_kod', 'cari']);
+                $unvan = $this->getValue($rowData, ['unvan', 'unvan_adi', 'firma_adi', 'firma']);
+                $email = $this->getValue($rowData, ['e_posta', 'e_posta', 'eposta', 'email', 'e_mail', 'mail']);
 
                 if (empty($cariKodu) || empty($unvan) || empty($email)) {
                     continue;

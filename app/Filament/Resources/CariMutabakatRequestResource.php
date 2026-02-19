@@ -96,7 +96,7 @@ class CariMutabakatRequestResource extends Resource
                                 Forms\Components\TextInput::make('karsiligi_pb')->label('Karşılığı PB')->placeholder('TRY')->default('TRY'),
                             ])
                             ->columns(4)
-                            ->defaultItems(1)
+                            ->defaultItems(0)
                             ->addActionLabel('Satır Ekle')
                             ->collapsible()
                             ->itemLabel(fn (array $state): ?string => ($state['unvan'] ?? null) . ' (' . ($state['cari_kodu'] ?? '') . ')'),
