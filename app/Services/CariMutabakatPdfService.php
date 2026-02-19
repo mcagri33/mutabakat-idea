@@ -41,7 +41,7 @@ class CariMutabakatPdfService
         $donem = '31.12.' . $year;
         $mutabakatTarihi = $reply->replied_at?->format('d.m.Y H:i:s') ?? '-';
         $onaylayanKisi = $reply->cevaplayan_unvan ?? $item->email ?? '-';
-        $onayDurumu = $reply->cevap === 'mutabıkız' ? 'onaylı (web-sistem)' : 'onaylanmadı';
+        $onayDurumu = $reply->cevap === 'mutabıkız' ? 'Mutabıkız' : 'Mutabık Değiliz';
         $musteriSaticiKodu = $item->cari_kodu ?? $item->referans ?? '-';
         $eImzaliFormDurum = $reply->e_imzali_form_path ? 'Yüklendi' : '-';
 
