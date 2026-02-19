@@ -58,7 +58,7 @@ class CariMutabakatExport
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A1:T1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:S1')->applyFromArray($headerStyle);
 
         $monthNames = [
             1 => 'Ocak', 2 => 'Şubat', 3 => 'Mart', 4 => 'Nisan',
@@ -90,26 +90,26 @@ class CariMutabakatExport
                 'mutabık_değiliz' => 'Mutabık Değiliz',
                 default => '-',
             } : '-');
-            $sheet->setCellValue('O' . $row, match ($item->mail_status) {
+            $sheet->setCellValue('N' . $row, match ($item->mail_status) {
                 'pending' => 'Beklemede',
                 'sent' => 'Gönderildi',
                 'failed' => 'Hata',
                 default => '-',
             });
-            $sheet->setCellValue('P' . $row, match ($item->reply_status) {
+            $sheet->setCellValue('O' . $row, match ($item->reply_status) {
                 'pending' => 'Beklemede',
                 'received' => 'Geldi',
                 'completed' => 'Tamamlandı',
                 default => '-',
             });
-            $sheet->setCellValue('Q' . $row, $reply && $reply->ekstre_path ? 'Var' : '-');
-            $sheet->setCellValue('R' . $row, $reply && $reply->e_imzali_form_path ? 'Var' : '-');
-            $sheet->setCellValue('S' . $row, $reply?->cevaplayan_unvan ?? '-');
-            $sheet->setCellValue('T' . $row, $reply?->aciklama ?? '-');
+            $sheet->setCellValue('P' . $row, $reply && $reply->ekstre_path ? 'Var' : '-');
+            $sheet->setCellValue('Q' . $row, $reply && $reply->e_imzali_form_path ? 'Var' : '-');
+            $sheet->setCellValue('R' . $row, $reply?->cevaplayan_unvan ?? '-');
+            $sheet->setCellValue('S' . $row, $reply?->aciklama ?? '-');
             $row++;
         }
 
-        foreach (range('A', 'T') as $col) {
+        foreach (range('A', 'S') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
