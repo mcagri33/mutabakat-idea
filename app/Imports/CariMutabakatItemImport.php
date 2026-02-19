@@ -60,7 +60,7 @@ class CariMutabakatItemImport
                     'cc_email' => $this->getValue($rowData, ['cc_e_posta', 'cc e-posta', 'cc_email', 'cc']),
                     'tel_no' => $this->getValue($rowData, ['tel_no', 'telefon', 'phone']),
                     'bakiye_tipi' => $bakiyeTipi,
-                    'bakiye' => $this->parseNumeric($this->getValue($rowData, ['bakiye']), 0),
+                    'bakiye' => $this->parseNumeric($this->getValue($rowData, ['bakiye', 'bakiye_tutari', 'tutar', 'balance']), 0),
                     'pb' => $this->getValue($rowData, ['pb', 'para_birimi'], 'TL'),
                     'karsiligi' => $this->parseNumeric($this->getValue($rowData, ['karsiligi', 'yabanci_pb_karsiligi'])),
                     'karsiligi_pb' => $this->getValue($rowData, ['karsiligi_pb', 'karsiligi pb'], 'TRY'),
@@ -113,7 +113,9 @@ class CariMutabakatItemImport
         if ($value === null || $value === '') {
             return $default;
         }
-        $value = str_replace(['.', ','], ['', '.'], (string) $value);
+        $value = (string) $value;
+        // Binlik ayraçlarını kaldır (boşluk, nokta, virgül) - hem Türkçe (288.507.530) hem US (288,507,530) formatını destekler
+        $value = str_replace([' ', '.', ','], ['', '', ''], $value);
         return is_numeric($value) ? (float) $value : $default;
     }
 
