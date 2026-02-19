@@ -35,7 +35,15 @@ class CariMutabakatPdfService
         $phpWord->setDefaultFontSize(10);
 
         $section = $phpWord->addSection(['marginTop' => 600, 'marginBottom' => 600]);
+        
+        $section->addText(
+            'Cari Hesap Mutabakati',
+            ['bold' => true, 'size' => 18],
+            ['align' => 'center']
+        );
 
+        $section->addTextBreak(2);
+        
         $request = $item->request;
         $year = $request->year ?? now()->year;
         $donem = '31.12.' . $year;
