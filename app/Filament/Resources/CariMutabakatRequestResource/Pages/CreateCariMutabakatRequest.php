@@ -83,6 +83,13 @@ class CreateCariMutabakatRequest extends CreateRecord
                             return;
                         }
                         $current = $this->form->getState()['items'] ?? [];
+                        // Boş satırları filtrele (cari_kodu, unvan, email zorunlu)
+                        $current = array_values(array_filter($current, function ($item) {
+                            $cariKodu = trim($item['cari_kodu'] ?? '');
+                            $unvan = trim($item['unvan'] ?? '');
+                            $email = trim($item['email'] ?? '');
+                            return ! empty($cariKodu) && ! empty($unvan) && ! empty($email);
+                        }));
                         $merged = array_merge($current, $parsedItems);
                         $this->form->fill(['items' => $merged]);
                         Notification::make()
