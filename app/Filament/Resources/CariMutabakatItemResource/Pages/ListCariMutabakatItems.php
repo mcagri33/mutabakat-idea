@@ -20,7 +20,7 @@ class ListCariMutabakatItems extends ListRecords
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
                 ->action(function (): StreamedResponse {
-                    $items = $this->getFilteredTableQuery()
+                    $items = $this->getTableQueryForExport()
                         ->with(['request.customer', 'reply'])
                         ->orderBy('request_id')
                         ->orderBy('id')

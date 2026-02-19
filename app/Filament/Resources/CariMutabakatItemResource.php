@@ -100,6 +100,16 @@ class CariMutabakatItemResource extends Resource
                         'completed' => 'success',
                         default => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('reply.ekstre_path')
+                    ->label('Ekstre')
+                    ->formatStateUsing(fn (?string $path): string => $path ? 'Var' : '-')
+                    ->badge()
+                    ->color(fn (?string $path): string => $path ? 'success' : 'gray'),
+                Tables\Columns\TextColumn::make('reply.aciklama')
+                    ->label('Açıklama')
+                    ->limit(40)
+                    ->tooltip(fn ($record) => $record->reply?->aciklama)
+                    ->placeholder('-'),
             ])
             ->defaultSort('id', 'desc')
             ->filters([
