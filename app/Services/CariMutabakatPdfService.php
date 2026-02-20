@@ -98,6 +98,12 @@ class CariMutabakatPdfService
         ]);
         $section->addTextBreak(1);
 
+        // Açıklama
+        $aciklama = trim($reply->aciklama ?? '');
+        $section->addText('Açıklama', ['bold' => true]);
+        $section->addText($aciklama ?: '-');
+        $section->addTextBreak(1);
+
         // Footer
         $section->addText(now()->format('d.m.Y H:i') . "\t" . 'Ideadocs Portal');
         $section->addText('www.ideadocs.com.tr');
