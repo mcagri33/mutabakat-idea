@@ -102,9 +102,9 @@ class CariMutabakatItemResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('reply.ekstre_path')
                     ->label('Ekstre')
-                    ->formatStateUsing(fn (?string $path): string => $path ? 'Var' : '-')
+                    ->formatStateUsing(fn (?string $state): string => $state ? 'Var' : '-')
                     ->badge()
-                    ->color(fn (?string $path): string => $path ? 'success' : 'gray'),
+                    ->color(fn (?string $state): string => $state ? 'success' : 'gray'),
                 Tables\Columns\TextColumn::make('reply.aciklama')
                     ->label('Açıklama')
                     ->limit(40)
