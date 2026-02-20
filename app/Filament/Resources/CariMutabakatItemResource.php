@@ -3,8 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CariMutabakatItemResource\Pages;
+use App\Jobs\SendCariMutabakatMailJob;
 use App\Models\CariMutabakatItem;
 use App\Services\CariMutabakatPdfService;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -24,6 +28,28 @@ class CariMutabakatItemResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->with(['request.customer', 'reply']);
+    }
+
+    public static function form(Form $form): Form
+    {
+        return $form->schema([
+            Forms\Components\TextInput::make('hesap_tipi')->label('Hesap Tipi'),
+            Forms\Components\TextInput::make('referans')->label('Referans'),
+            Forms\Components\TextInput::make('cari_kodu')->label('Cari Kodu')->required(),
+            Forms\Components\TextInput::make('unvan')->label('Ünvan')->required(),
+            Forms\Components\TextInput::make('email')->label('E-Posta')->email()->required(),
+            Forms\Components\TextInput::make('cc_email')->label('CC E-Posta')->email(),
+            Forms\Components\TextInput::make('tel_no')->label('Tel No'),
+            Forms\Components\DatePicker::make('tarih')->label('Tarih')->displayFormat('d.m.Y')->native(false),
+            Forms\Components\Select::make('bakiye_tipi')
+                ->label('B/A')
+                ->options(['Borç' => 'Borç', 'Alacak' => 'Alacak'])
+                ->default('Borç'),
+            Forms\Components\TextInput::make('bakiye')->label('Bakiye')->numeric()->default(0),
+            Forms\Components\TextInput::make('pb')->label('PB')->placeholder('TL')->default('TL'),
+            Forms\Components\TextInput::make('karsiligi')->label('Karşılığı')->numeric(),
+            Forms\Components\TextInput::make('karsiligi_pb')->label('Karşılığı PB')->placeholder('TRY')->default('TRY'),
+        ]);
     }
 
     public static function getNavigationBadge(): ?string
@@ -165,28 +191,54 @@ class CariMutabakatItemResource extends Resource
                         return response()->download($fullPath, basename($path));
                     }),
                 Tables\Actions\Action::make('generateCariGeriDonusPdf')
-                    ->label('PDF Oluştur')
+                    ->label(fn ($record) => $record->reply?->pdf_path ? 'PDF Yenile' : 'PDF Oluştur')
                     ->icon('heroicon-o-document-plus')
                     ->color('warning')
-                    ->visible(fn ($record) => $record->reply && !$record->reply->pdf_path)
+                    ->visible(fn ($record) => $record->reply)
                     ->requiresConfirmation()
+                    ->modalHeading(fn ($record) => $record->reply?->pdf_path ? 'PDF Yenile' : 'PDF Oluştur')
+                    ->modalDescription('Cari geri dönüş PDF oluşturulacak/yenilenecek. LibreOffice kurulu olmalıdır.')
                     ->action(function ($record) {
                         try {
                             $pdfService = app(CariMutabakatPdfService::class);
                             $pdfPath = $pdfService->generatePdf($record->fresh());
                             $record->reply->update(['pdf_path' => $pdfPath]);
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('PDF oluşturuldu')
                                 ->success()
                                 ->send();
                         } catch (\Throwable $e) {
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('PDF oluşturulamadı')
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();
                         }
                     }),
+                Tables\Actions\Action::make('tekrarMailGonder')
+                    ->label('Tekrar Mail Gönder')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('primary')
+                    ->visible(fn ($record) => $record->reply?->cevap === 'mutabık_değiliz' && $record->email)
+                    ->requiresConfirmation()
+                    ->modalHeading('Tekrar Mail Gönder')
+                    ->modalDescription('Karşılık düzeltildikten sonra tekrar mail gönderilecek. Mevcut cevap silinecek, karşı taraf yeni link ile tekrar cevap verebilecek.')
+                    ->action(function ($record) {
+                        $record->reply?->delete();
+                        $record->update([
+                            'reply_status' => 'pending',
+                            'reply_received_at' => null,
+                        ]);
+                        if (empty($record->token)) {
+                            $record->update(['token' => CariMutabakatItem::generateToken()]);
+                        }
+                        SendCariMutabakatMailJob::dispatch($record->fresh());
+                        Notification::make()
+                            ->title('Mail kuyruğa alındı')
+                            ->success()
+                            ->send();
+                    }),
+                Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('downloadCariGeriDonusPdf')
                     ->label('Cari Geri Dönüş PDF')
                     ->icon('heroicon-o-document-text')
@@ -218,6 +270,7 @@ class CariMutabakatItemResource extends Resource
     {
         return [
             'index' => Pages\ListCariMutabakatItems::route('/'),
+            'edit' => Pages\EditCariMutabakatItem::route('/{record}/edit'),
         ];
     }
 

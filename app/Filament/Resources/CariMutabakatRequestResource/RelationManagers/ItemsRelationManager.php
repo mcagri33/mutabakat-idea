@@ -143,6 +143,29 @@ class ItemsRelationManager extends RelationManager
                             ->success()
                             ->send();
                     }),
+                Tables\Actions\Action::make('tekrarMailGonder')
+                    ->label('Tekrar Mail Gönder')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('primary')
+                    ->visible(fn ($record) => $record->reply?->cevap === 'mutabık_değiliz' && $record->email)
+                    ->requiresConfirmation()
+                    ->modalHeading('Tekrar Mail Gönder')
+                    ->modalDescription('Karşılık düzeltildikten sonra tekrar mail gönderilecek. Mevcut cevap silinecek, karşı taraf yeni link ile tekrar cevap verebilecek.')
+                    ->action(function ($record) {
+                        $record->reply?->delete();
+                        $record->update([
+                            'reply_status' => 'pending',
+                            'reply_received_at' => null,
+                        ]);
+                        if (empty($record->token)) {
+                            $record->update(['token' => \App\Models\CariMutabakatItem::generateToken()]);
+                        }
+                        SendCariMutabakatMailJob::dispatch($record->fresh());
+                        Notification::make()
+                            ->title('Mail kuyruğa alındı')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('downloadEkstre')
                     ->label('Ekstre İndir')
                     ->icon('heroicon-o-arrow-down-tray')
@@ -180,13 +203,13 @@ class ItemsRelationManager extends RelationManager
                         return response()->download($fullPath, basename($path));
                     }),
                 Tables\Actions\Action::make('generateCariGeriDonusPdf')
-                    ->label('PDF Oluştur')
+                    ->label(fn ($record) => $record->reply?->pdf_path ? 'PDF Yenile' : 'PDF Oluştur')
                     ->icon('heroicon-o-document-plus')
                     ->color('warning')
-                    ->visible(fn ($record) => $record->reply && !$record->reply->pdf_path)
+                    ->visible(fn ($record) => $record->reply)
                     ->requiresConfirmation()
-                    ->modalHeading('Cari Geri Dönüş PDF Oluştur')
-                    ->modalDescription('Bu cevap için PDF oluşturulacak. LibreOffice kurulu olmalıdır.')
+                    ->modalHeading(fn ($record) => $record->reply?->pdf_path ? 'PDF Yenile' : 'Cari Geri Dönüş PDF Oluştur')
+                    ->modalDescription('Cari geri dönüş PDF oluşturulacak/yenilenecek. LibreOffice kurulu olmalıdır.')
                     ->action(function ($record) {
                         try {
                             $pdfService = app(CariMutabakatPdfService::class);
