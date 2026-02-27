@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ReconciliationRequestResource\RelationManagers;
 use App\Models\CustomerBank;
 use App\Models\ReconciliationBank;
 use App\Jobs\SendReconciliationMailJob;
+use App\Services\MutabakatService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -158,9 +159,38 @@ class BanksRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-    Tables\Actions\EditAction::make(),
-
-    Tables\Actions\Action::make('sendMail')
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('downloadBankLetterPdf')
+                    ->label('Banka Mektubu PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('gray')
+                    ->tooltip('Güncel tarihli banka mutabakat mektubu PDF\'i indir (kaşe imzalı gönderim için)')
+                    ->action(function ($record) {
+                        $record->load(['request.customer', 'customer']);
+                        $request = $record->request;
+                        $customer = $record->customer;
+                        if (!$request || !$customer) {
+                            Notification::make()->title('Talep veya müşteri bulunamadı')->danger()->send();
+                            return;
+                        }
+                        try {
+                            $mutabakatService = app(MutabakatService::class);
+                            $pdfPath = $mutabakatService->generatePdf($request, $customer, $record);
+                            $filename = 'Banka-Mutabakat-Mektubu_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $customer->name ?? 'firma') . '_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $record->bank_name ?? 'banka') . '_' . now()->format('Y-m-d') . '.pdf';
+                            $response = response()->download($pdfPath, $filename, ['Content-Type' => 'application/pdf']);
+                            if (file_exists($pdfPath)) {
+                                register_shutdown_function(fn () => @unlink($pdfPath));
+                            }
+                            return $response;
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('PDF oluşturulamadı')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Tables\Actions\Action::make('sendMail')
         ->label('Mail Gönder')
         ->icon('heroicon-o-paper-airplane')
         ->color('primary')
