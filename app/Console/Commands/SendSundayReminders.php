@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\SendReminderMailJob;
 use App\Mail\PazarHatirlatmaRaporuMailable;
 use App\Models\ReconciliationBank;
 use App\Models\User;
-use App\Services\ReconciliationMailService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -19,7 +19,7 @@ class SendSundayReminders extends Command
 
     protected $description = 'Her Pazar cevap gelmeyen bankalara otomatik hatırlatma maili gönderir (kaşe bekleyen ve cevap gelenler hariç), adminlere rapor iletir';
 
-    public function handle(ReconciliationMailService $mailService): int
+    public function handle(): int
     {
         $dryRun = $this->option('dry-run');
         $testMode = $this->option('test');
@@ -101,36 +101,23 @@ class SendSundayReminders extends Command
             return self::SUCCESS;
         }
 
-        $sentCount = 0;
-        $sentItems = [];
-        $failedItems = [];
         $overrideRecipients = $testMode ? $adminEmails->toArray() : null;
+        $queuedCount = 0;
 
         foreach ($banksToRemind as $bank) {
-            try {
-                $mailService->sendReminderMail($bank, $overrideRecipients);
-                $sentCount++;
-                $sentItems[] = [
-                    'firma'  => $bank->customer?->name ?? '-',
-                    'banka'  => $bank->bank_name,
-                    'yil'    => $bank->request?->year ?? '-',
-                ];
-            } catch (\Throwable $e) {
-                Log::error('Pazar hatırlatma maili gönderilemedi', [
-                    'bank_id' => $bank->id,
-                    'error'   => $e->getMessage(),
-                ]);
-                $failedItems[] = [
-                    'firma'  => $bank->customer?->name ?? '-',
-                    'banka'  => $bank->bank_name,
-                    'hata'   => $e->getMessage(),
-                ];
-            }
+            SendReminderMailJob::dispatch($bank, $overrideRecipients);
+            $queuedCount++;
         }
+
+        $sentItems = $banksToRemind->map(fn ($b) => [
+            'firma' => $b->customer?->name ?? '-',
+            'banka' => $b->bank_name,
+            'yil'   => $b->request?->year ?? '-',
+        ])->toArray();
 
         if ($adminEmails->isNotEmpty()) {
             try {
-                $mailable = new PazarHatirlatmaRaporuMailable($sentItems, $failedItems, $excludedKase, $excludedReceived);
+                $mailable = new PazarHatirlatmaRaporuMailable($sentItems, [], $excludedKase, $excludedReceived);
                 Mail::to($adminEmails->toArray())->send($mailable);
                 $this->info('Admin raporu ' . $adminEmails->count() . ' adrese gönderildi.');
             } catch (\Throwable $e) {
@@ -138,10 +125,7 @@ class SendSundayReminders extends Command
             }
         }
 
-        $this->info("Hatırlatma maili gönderilen: {$sentCount} banka.");
-        if (!empty($failedItems)) {
-            $this->warn('Başarısız: ' . count($failedItems) . ' banka.');
-        }
+        $this->info("Hatırlatma maili kuyruğa alındı: {$queuedCount} banka (arka planda gönderilecek).");
 
         return self::SUCCESS;
     }

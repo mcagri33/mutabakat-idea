@@ -20,8 +20,8 @@
 
 <div class="meta">Rapor tarihi: <strong>{{ $reportDate }}</strong></div>
 
-<h2>Hatırlatma Maili Gönderilenler</h2>
-<p>Bu bankalara otomatik hatırlatma maili gönderildi (cevap bekleniyor, kaşe talep edilmedi).</p>
+<h2>Hatırlatma Maili Kuyruğa Alınanlar</h2>
+<p>Bu bankalara hatırlatma maili kuyruğa alındı (cevap bekleniyor, kaşe talep edilmedi). Mailler arka planda gönderilecek.</p>
 @if(empty($sentItems))
     <p class="empty">Gönderilecek banka bulunamadı.</p>
 @else
@@ -37,7 +37,7 @@
             @endforeach
         </tbody>
     </table>
-    <p><strong>Toplam: {{ count($sentItems) }}</strong> bankaya hatırlatma gönderildi.</p>
+    <p><strong>Toplam: {{ count($sentItems) }}</strong> bankaya hatırlatma kuyruğa alındı.</p>
 @endif
 
 @if(!empty($excludedKase))
