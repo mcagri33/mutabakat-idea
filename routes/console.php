@@ -25,3 +25,9 @@ Schedule::command('mutabakat:send-sunday-reminders')
     ->weeklyOn(0, '10:00')
     ->timezone('Europe/Istanbul')
     ->when(fn () => now()->gte('2025-03-08'));
+
+// Her Pazar 11:00 - cevap gelmeyen cari mutabakatlara hatırlatma (haftalık, kuyrukta)
+Schedule::command('mutabakat:send-cari-reminders')
+    ->weeklyOn(0, '11:00')
+    ->timezone('Europe/Istanbul')
+    ->when(fn () => now()->gte('2025-03-08'));
