@@ -30,6 +30,7 @@ class MailReportExport
             'Gönderildi',
             'Bankadan Cevap Geldi',
             'Bankadan Cevap Bekliyor',
+            'Kaşe Bekleniyor',
             'Durum / Özet',
         ];
         $sheet->fromArray([$headings], null, 'A1');
@@ -45,7 +46,7 @@ class MailReportExport
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
 
         $row = 2;
         foreach ($this->rows as $r) {
@@ -63,12 +64,15 @@ class MailReportExport
             $replyReceived = $r['reply_received_count'] ?? 0;
             $replyPending = $r['reply_pending_count'] ?? 0;
 
+            $kaseBekleyen = $r['kase_bekleyen_count'] ?? 0;
+
             $sheet->setCellValue('A' . $row, $r['customer_name'] ?? '-');
             $sheet->setCellValue('B' . $row, $r['year'] ?? '-');
             $sheet->setCellValue('C' . $row, $sentText);
             $sheet->setCellValue('D' . $row, $replyReceived > 0 ? $replyReceived . ' banka' : '-');
             $sheet->setCellValue('E' . $row, $replyPending > 0 ? $replyPending . ' banka' : '-');
-            $sheet->setCellValue('F' . $row, $r['summary'] ?? '-');
+            $sheet->setCellValue('F' . $row, $kaseBekleyen > 0 ? $kaseBekleyen . ' banka' : '-');
+            $sheet->setCellValue('G' . $row, $r['summary'] ?? '-');
             $row++;
         }
 
@@ -77,7 +81,8 @@ class MailReportExport
         $sheet->getColumnDimension('C')->setWidth(25);
         $sheet->getColumnDimension('D')->setWidth(22);
         $sheet->getColumnDimension('E')->setWidth(24);
-        $sheet->getColumnDimension('F')->setWidth(50);
+        $sheet->getColumnDimension('F')->setWidth(18);
+        $sheet->getColumnDimension('G')->setWidth(50);
 
         $filename = 'firma_banka_mail_raporu_' . now()->format('Y-m-d_His') . '.xlsx';
         $writer = new Xlsx($spreadsheet);

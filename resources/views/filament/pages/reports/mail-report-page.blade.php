@@ -40,6 +40,7 @@
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Gönderildi</th>
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Bankadan Cevap Geldi</th>
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Bankadan Cevap Bekliyor</th>
+                                <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Kaşe Bekleniyor</th>
                                 <th class="fi-table-header-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Durum / Özet</th>
                             </tr>
                         </thead>
@@ -66,12 +67,13 @@
                                         </td>
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ ($row['reply_received_count'] ?? 0) > 0 ? ($row['reply_received_count'] . ' banka') : '-' }}</td>
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ ($row['reply_pending_count'] ?? 0) > 0 ? ($row['reply_pending_count'] . ' banka') : '-' }}</td>
+                                        <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ ($row['kase_bekleyen_count'] ?? 0) > 0 ? ($row['kase_bekleyen_count'] . ' banka') : '-' }}</td>
                                         <td class="fi-table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $row['summary'] ?? '-' }}</td>
                                     </tr>
                                 @endforeach
                             @else
                                 <tr>
-                                    <td colspan="6" class="fi-table-cell px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    <td colspan="7" class="fi-table-cell px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                         Henüz firma bulunmuyor veya filtreye uygun kayıt yok.
                                     </td>
                                 </tr>
