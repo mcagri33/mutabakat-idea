@@ -20,6 +20,8 @@ Schedule::command('mutabakat:send-weekly-report')
     ->timezone('Europe/Istanbul');
 
 // Her Pazar 10:00 - cevap gelmeyen bankalara hatırlatma (kaşe bekleyen ve cevap gelenler hariç)
+// 2025-03-08'den itibaren aktif
 Schedule::command('mutabakat:send-sunday-reminders')
     ->weeklyOn(0, '10:00')
-    ->timezone('Europe/Istanbul');
+    ->timezone('Europe/Istanbul')
+    ->when(fn () => now()->gte('2025-03-08'));
