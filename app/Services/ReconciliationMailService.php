@@ -219,4 +219,105 @@ class ReconciliationMailService
             throw $e;
         }
     }
+
+    /**
+     * Hatırlatma maili gönder (Pazar otomatik gönderimleri için).
+     * Kaşe bekleyen ve cevap gelen bankalara GÖNDERİLMEZ.
+     */
+    public function sendReminderMail(ReconciliationBank $bank): void
+    {
+        $request  = $bank->request;
+        $customer = $bank->customer;
+
+        if (!$bank->officer_email) {
+            throw new \Exception("Banka yetkilisinin e-postası yok.");
+        }
+
+        $bank->load(['request', 'customer']);
+        $request  = $bank->request;
+        $customer = $bank->customer;
+
+        if (!$request || !$customer) {
+            throw new \Exception("Talep veya müşteri bilgisi bulunamadı.");
+        }
+
+        $subject = "Hatırlatma: {$customer->name} - {$request->year} Yılı Banka Mutabakatı";
+
+        $bodyViewData = [
+            'bank'     => $bank,
+            'customer' => $customer,
+            'request'  => $request,
+        ];
+
+        try {
+            $pdfPath = $this->mutabakatService->generatePdf($request, $customer, $bank);
+
+            $ccAddresses = ['mutabakat@ideadenetim.com.tr'];
+            if ($request->include_auto_cc ?? true) {
+                if ($customer->email && !in_array($customer->email, $ccAddresses)) {
+                    $ccAddresses[] = $customer->email;
+                }
+            }
+            if ($request->cc_emails) {
+                foreach (preg_split('/[,;\n\r]+/', $request->cc_emails) as $email) {
+                    $email = trim($email);
+                    if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL) && !in_array($email, $ccAddresses)) {
+                        $ccAddresses[] = $email;
+                    }
+                }
+            }
+
+            Mail::send('emails.bank-reconciliation-reminder', $bodyViewData, function ($message) use ($bank, $request, $subject, $pdfPath, $ccAddresses) {
+                $message->from('mutabakat@mg.ideadocs.com.tr', 'Mutabakat Yönetim Sistemi');
+                $message->to($bank->officer_email)
+                    ->cc($ccAddresses)
+                    ->subject($subject)
+                    ->attach($pdfPath, ['as' => 'Banka-Mutabakat-Mektubu.pdf', 'mime' => 'application/pdf']);
+
+                // Talep ek dosyalarını da ekle (ilk maildeki gibi)
+                $request->refresh();
+                if ($request->attachments && !empty($request->attachments)) {
+                    $attachments = is_array($request->attachments) ? $request->attachments : [$request->attachments];
+                    foreach ($attachments as $attachmentPath) {
+                        if (empty($attachmentPath)) continue;
+                        $normalizedPath = str_replace('\\', '/', $attachmentPath);
+                        if (!str_starts_with($normalizedPath, 'reconciliation_request_attachments/')) {
+                            $normalizedPath = 'reconciliation_request_attachments/' . basename($attachmentPath);
+                        }
+                        $fullPath = storage_path('app/' . $normalizedPath);
+                        if (file_exists($fullPath)) {
+                            $message->attach($fullPath, [
+                                'as'   => basename($normalizedPath),
+                                'mime' => mime_content_type($fullPath) ?: 'application/octet-stream',
+                            ]);
+                        }
+                    }
+                }
+            });
+
+            ReconciliationEmail::create([
+                'request_id'  => $request->id,
+                'bank_id'     => $bank->id,
+                'sent_to'     => $bank->officer_email,
+                'subject'     => $subject,
+                'body'        => view('emails.bank-reconciliation-reminder', $bodyViewData)->render(),
+                'status'      => 'sent',
+                'sent_at'     => now(),
+            ]);
+
+            Log::info('Banka mutabakat hatırlatma maili gönderildi', ['bank_id' => $bank->id]);
+        } catch (\Exception $e) {
+            ReconciliationEmail::create([
+                'request_id'     => $request->id,
+                'bank_id'        => $bank->id,
+                'sent_to'        => $bank->officer_email,
+                'subject'        => $subject,
+                'body'           => null,
+                'status'         => 'failed',
+                'sent_at'        => now(),
+                'error_message'  => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
 }

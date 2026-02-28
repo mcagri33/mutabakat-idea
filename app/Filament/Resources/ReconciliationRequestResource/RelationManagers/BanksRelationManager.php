@@ -55,6 +55,11 @@ class BanksRelationManager extends RelationManager
                     'completed' => 'Tamamlandı',
                 ])
                 ->default('pending'),
+
+            Forms\Components\Toggle::make('kase_talep_edildi')
+                ->label('Banka firmadan kaşe talep etti')
+                ->helperText('Firmadan kaşe imzalı mektup bekleniyorsa işaretleyin. Bu bankalara otomatik hatırlatma maili GÖNDERİLMEZ.')
+                ->default(false),
         ]);
     }
 
@@ -98,6 +103,15 @@ class BanksRelationManager extends RelationManager
                         'completed' => 'Tamamlandı',
                         default => $state,
                     }),
+
+                Tables\Columns\IconColumn::make('kase_talep_edildi')
+                    ->label('Kaşe')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-document-check')
+                    ->trueColor('warning')
+                    ->falseIcon('heroicon-o-minus')
+                    ->falseColor('gray')
+                    ->tooltip(fn ($record) => $record->kase_talep_edildi ? 'Firmadan kaşe bekleniyor' : '-'),
             ])
             ->headerActions([
                 Action::make('addMissingBanks')

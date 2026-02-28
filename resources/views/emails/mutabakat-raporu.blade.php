@@ -40,6 +40,7 @@
                 <th>Gönderildi</th>
                 <th>Bankadan Cevap Geldi</th>
                 <th>Bankadan Cevap Bekliyor</th>
+                <th>Kaşe Bekleyen</th>
                 <th>Durum / Özet</th>
             </tr>
         </thead>
@@ -65,6 +66,7 @@
                 </td>
                 <td>{{ ($row['reply_received_count'] ?? 0) > 0 ? ($row['reply_received_count'] . ' banka') : '-' }}</td>
                 <td>{{ ($row['reply_pending_count'] ?? 0) > 0 ? ($row['reply_pending_count'] . ' banka') : '-' }}</td>
+                <td>{{ ($row['kase_bekleyen_count'] ?? 0) > 0 ? ($row['kase_bekleyen_count'] . ' banka') : '-' }}</td>
                 <td>{{ $row['summary'] ?? '-' }}</td>
             </tr>
             @endforeach

@@ -18,3 +18,8 @@ Schedule::command('reconciliation:check-mails')
 Schedule::command('mutabakat:send-weekly-report')
     ->weeklyOn(1, '09:00')
     ->timezone('Europe/Istanbul');
+
+// Her Pazar 10:00 - cevap gelmeyen bankalara hatırlatma (kaşe bekleyen ve cevap gelenler hariç)
+Schedule::command('mutabakat:send-sunday-reminders')
+    ->weeklyOn(0, '10:00')
+    ->timezone('Europe/Istanbul');

@@ -288,11 +288,13 @@ class MutabakatReportService
             $sent = $banks->where('mail_status', 'sent')->count();
             $received = $banks->whereIn('reply_status', ['received', 'completed'])->count();
             $pending = $banks->where('reply_status', 'pending')->count();
+            $kaseBekleyen = $banks->where('kase_talep_edildi', true)->count();
 
             return [
                 'sent_count' => $sent,
                 'reply_received_count' => $received,
                 'reply_pending_count' => $pending,
+                'kase_bekleyen_count' => $kaseBekleyen,
             ];
         });
 
@@ -334,13 +336,14 @@ class MutabakatReportService
         $missingBanksByCustomer = $banksWithoutActivity->groupBy('customer_id')->map(fn ($banks) => $banks->count());
 
         $rows = $customers->map(function ($customer) use ($year, $systemByCustomer, $manualByCustomer, $missingBanksByCustomer) {
-            $sys = $systemByCustomer[$customer->id] ?? ['sent_count' => 0, 'reply_received_count' => 0, 'reply_pending_count' => 0];
+            $sys = $systemByCustomer[$customer->id] ?? ['sent_count' => 0, 'reply_received_count' => 0, 'reply_pending_count' => 0, 'kase_bekleyen_count' => 0];
             $man = $manualByCustomer[$customer->id] ?? ['count' => 0, 'reply_received_count' => 0, 'reply_pending_count' => 0];
             $bankCount = (int) $customer->banks_count;
             $sentCount = $sys['sent_count'];
             $manualCount = $man['count'];
             $replyReceived = $sys['reply_received_count'] + $man['reply_received_count'];
             $replyPending = $sys['reply_pending_count'] + $man['reply_pending_count'];
+            $kaseBekleyen = $sys['kase_bekleyen_count'] ?? 0;
             $missingCount = $missingBanksByCustomer[$customer->id] ?? 0;
 
             $summary = $this->buildFirmSummary(
@@ -360,6 +363,7 @@ class MutabakatReportService
                 'manual_count' => $manualCount,
                 'reply_received_count' => $replyReceived,
                 'reply_pending_count' => $replyPending,
+                'kase_bekleyen_count' => $kaseBekleyen,
                 'missing_bank_count' => $missingCount,
                 'bank_count' => $bankCount,
                 'summary' => $summary,

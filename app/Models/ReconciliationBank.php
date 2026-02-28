@@ -23,9 +23,11 @@ class ReconciliationBank extends Model
         'reply_received_at',
 
         'notes',
+        'kase_talep_edildi',
     ];
 
     protected $casts = [
+        'kase_talep_edildi' => 'boolean',
         'mail_sent_at'       => 'datetime',
         'reply_received_at'  => 'datetime',
     ];
