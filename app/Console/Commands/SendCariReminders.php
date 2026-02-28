@@ -7,6 +7,7 @@ use App\Mail\CariHatirlatmaRaporuMailable;
 use App\Models\CariMutabakatItem;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -77,12 +78,10 @@ class SendCariReminders extends Command
         }
 
         $overrideRecipients = $testMode ? $adminEmails->toArray() : null;
-        $queuedCount = 0;
 
-        foreach ($itemsToRemind as $item) {
-            SendCariReminderMailJob::dispatch($item, $overrideRecipients);
-            $queuedCount++;
-        }
+        $jobs = $itemsToRemind->map(
+            fn ($item) => new SendCariReminderMailJob($item, $overrideRecipients)
+        )->all();
 
         $sentItems = $itemsToRemind->map(fn ($i) => [
             'firma' => $i->request?->customer?->name ?? '-',
@@ -90,17 +89,22 @@ class SendCariReminders extends Command
             'yil'   => $i->request?->year ?? '-',
         ])->toArray();
 
-        if ($adminEmails->isNotEmpty()) {
-            try {
-                $mailable = new CariHatirlatmaRaporuMailable($sentItems);
-                Mail::to($adminEmails->toArray())->send($mailable);
-                $this->info('Admin raporu ' . $adminEmails->count() . ' adrese gönderildi.');
-            } catch (\Throwable $e) {
-                Log::error('Cari hatırlatma raporu gönderilemedi', ['error' => $e->getMessage()]);
-            }
-        }
+        $adminEmailsArr = $adminEmails->toArray();
 
-        $this->info("Hatırlatma maili kuyruğa alındı: {$queuedCount} cari (arka planda gönderilecek).");
+        Bus::batch($jobs)
+            ->then(function () use ($sentItems, $adminEmailsArr) {
+                if (!empty($adminEmailsArr)) {
+                    try {
+                        Mail::to($adminEmailsArr)->send(new CariHatirlatmaRaporuMailable($sentItems));
+                        Log::info('Cari hatırlatma raporu adminlere gönderildi', ['count' => count($adminEmailsArr)]);
+                    } catch (\Throwable $e) {
+                        Log::error('Cari hatırlatma raporu gönderilemedi', ['error' => $e->getMessage()]);
+                    }
+                }
+            })
+            ->dispatch();
+
+        $this->info("Hatırlatma maili kuyruğa alındı: " . count($jobs) . " cari. Admin raporu tüm mailler gönderildikten sonra iletilecek.");
 
         return self::SUCCESS;
     }
