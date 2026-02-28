@@ -14,7 +14,8 @@ class SendSundayReminders extends Command
 {
     protected $signature = 'mutabakat:send-sunday-reminders
                             {--dry-run : Mailleri göndermeden sadece listeyi göster}
-                            {--test : Mailleri bankaya değil adminlere gönder (test için)}';
+                            {--test : Mailleri bankaya değil adminlere gönder (test için)}
+                            {--limit= : Maksimum gönderilecek mail sayısı (test için, örn: 2)}';
 
     protected $description = 'Her Pazar cevap gelmeyen bankalara otomatik hatırlatma maili gönderir (kaşe bekleyen ve cevap gelenler hariç), adminlere rapor iletir';
 
@@ -22,6 +23,7 @@ class SendSundayReminders extends Command
     {
         $dryRun = $this->option('dry-run');
         $testMode = $this->option('test');
+        $limit = $this->option('limit') ? (int) $this->option('limit') : null;
 
         if ($dryRun) {
             $this->info('=== DRY-RUN: Mail GÖNDERİLMEYECEK, sadece liste gösterilecek ===');
@@ -46,6 +48,11 @@ class SendSundayReminders extends Command
             ->where('officer_email', '!=', '')
             ->whereHas('request', fn ($q) => $q->whereIn('year', [$currentYear, $currentYear - 1]))
             ->get();
+
+        if ($limit !== null && $limit > 0) {
+            $banksToRemind = $banksToRemind->take($limit);
+            $this->info("Limit uygulandı: en fazla {$limit} mail.");
+        }
 
         // Hariç tutulanlar: kaşe bekleyen, cevap gelen
         $excludedKase = ReconciliationBank::query()
