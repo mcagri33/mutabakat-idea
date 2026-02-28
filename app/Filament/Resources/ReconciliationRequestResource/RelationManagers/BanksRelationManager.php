@@ -68,9 +68,19 @@ class BanksRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('bank_name')
             ->columns([
-                Tables\Columns\TextColumn::make('bank_name')->label('Banka'),
-                Tables\Columns\TextColumn::make('officer_email')->label('Yetkili E-posta'),
-                Tables\Columns\TextColumn::make('officer_phone')->label('Telefon'),
+                Tables\Columns\TextColumn::make('bank_name')->label('Banka')->searchable(),
+                Tables\Columns\TextColumn::make('officer_email')->label('Yetkili E-posta')->limit(30),
+                Tables\Columns\TextColumn::make('officer_phone')->label('Telefon')->limit(15),
+
+                Tables\Columns\IconColumn::make('kase_talep_edildi')
+                    ->label('Kaşe')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-document-check')
+                    ->trueColor('warning')
+                    ->falseIcon('heroicon-o-minus')
+                    ->falseColor('gray')
+                    ->tooltip(fn ($record) => $record->kase_talep_edildi ? 'Firmadan kaşe bekleniyor' : '-')
+                    ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('mail_status')
                     ->label('Mail Durumu')
@@ -103,15 +113,6 @@ class BanksRelationManager extends RelationManager
                         'completed' => 'Tamamlandı',
                         default => $state,
                     }),
-
-                Tables\Columns\IconColumn::make('kase_talep_edildi')
-                    ->label('Kaşe')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-document-check')
-                    ->trueColor('warning')
-                    ->falseIcon('heroicon-o-minus')
-                    ->falseColor('gray')
-                    ->tooltip(fn ($record) => $record->kase_talep_edildi ? 'Firmadan kaşe bekleniyor' : '-'),
             ])
             ->headerActions([
                 Action::make('addMissingBanks')

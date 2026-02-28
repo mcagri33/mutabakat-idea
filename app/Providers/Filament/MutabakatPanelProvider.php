@@ -10,6 +10,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -27,6 +28,7 @@ class MutabakatPanelProvider extends PanelProvider
             ->default()
             ->id('mutabakat')
             ->path('/')
+            ->maxContentWidth(MaxWidth::Full)
             ->login()
             ->colors([
                 'primary' => Color::Amber,
