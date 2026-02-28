@@ -12,12 +12,24 @@ use Illuminate\Support\Facades\Mail;
 
 class SendSundayReminders extends Command
 {
-    protected $signature = 'mutabakat:send-sunday-reminders';
+    protected $signature = 'mutabakat:send-sunday-reminders
+                            {--dry-run : Mailleri göndermeden sadece listeyi göster}
+                            {--test : Mailleri bankaya değil adminlere gönder (test için)}';
 
     protected $description = 'Her Pazar cevap gelmeyen bankalara otomatik hatırlatma maili gönderir (kaşe bekleyen ve cevap gelenler hariç), adminlere rapor iletir';
 
     public function handle(ReconciliationMailService $mailService): int
     {
+        $dryRun = $this->option('dry-run');
+        $testMode = $this->option('test');
+
+        if ($dryRun) {
+            $this->info('=== DRY-RUN: Mail GÖNDERİLMEYECEK, sadece liste gösterilecek ===');
+        }
+        if ($testMode) {
+            $this->warn('=== TEST MODU: Mailler adminlere gönderilecek (bankalara DEĞİL) ===');
+        }
+
         $this->info('Pazar hatırlatma mailleri hazırlanıyor...');
 
         $currentYear = now()->year;
@@ -34,32 +46,6 @@ class SendSundayReminders extends Command
             ->where('officer_email', '!=', '')
             ->whereHas('request', fn ($q) => $q->whereIn('year', [$currentYear, $currentYear - 1]))
             ->get();
-
-        $sentCount = 0;
-        $sentItems = [];
-        $failedItems = [];
-
-        foreach ($banksToRemind as $bank) {
-            try {
-                $mailService->sendReminderMail($bank);
-                $sentCount++;
-                $sentItems[] = [
-                    'firma'  => $bank->customer?->name ?? '-',
-                    'banka'  => $bank->bank_name,
-                    'yil'    => $bank->request?->year ?? '-',
-                ];
-            } catch (\Throwable $e) {
-                Log::error('Pazar hatırlatma maili gönderilemedi', [
-                    'bank_id' => $bank->id,
-                    'error'   => $e->getMessage(),
-                ]);
-                $failedItems[] = [
-                    'firma'  => $bank->customer?->name ?? '-',
-                    'banka'  => $bank->bank_name,
-                    'hata'   => $e->getMessage(),
-                ];
-            }
-        }
 
         // Hariç tutulanlar: kaşe bekleyen, cevap gelen
         $excludedKase = ReconciliationBank::query()
@@ -79,12 +65,61 @@ class SendSundayReminders extends Command
             ->get()
             ->map(fn ($b) => ['firma' => $b->customer?->name ?? '-', 'banka' => $b->bank_name])->toArray();
 
-        // Adminlere rapor gönder
         $admins = User::whereHas('roles', fn ($q) => $q->where('name', 'admin')->orWhere('name', 'super-admin'))->get();
         if ($admins->isEmpty()) {
             $admins = User::all();
         }
         $adminEmails = $admins->pluck('email')->filter()->unique()->values();
+
+        if ($dryRun) {
+            $this->table(
+                ['Firma', 'Banka', 'Yıl', 'Normalde alıcı'],
+                $banksToRemind->map(fn ($b) => [
+                    $b->customer?->name ?? '-',
+                    $b->bank_name,
+                    $b->request?->year ?? '-',
+                    $testMode ? 'Admin' : $b->officer_email,
+                ])->toArray()
+            );
+            $this->info("Gönderilecek: " . $banksToRemind->count() . " banka.");
+            if (!empty($excludedKase)) {
+                $this->newLine();
+                $this->warn('Kaşe bekleyen (gönderilmeyecek): ' . count($excludedKase));
+                $this->table(['Firma', 'Banka'], $excludedKase);
+            }
+            if (!empty($excludedReceived)) {
+                $this->newLine();
+                $this->info('Cevap gelmiş (gönderilmeyecek): ' . count($excludedReceived));
+            }
+            return self::SUCCESS;
+        }
+
+        $sentCount = 0;
+        $sentItems = [];
+        $failedItems = [];
+        $overrideRecipients = $testMode ? $adminEmails->toArray() : null;
+
+        foreach ($banksToRemind as $bank) {
+            try {
+                $mailService->sendReminderMail($bank, $overrideRecipients);
+                $sentCount++;
+                $sentItems[] = [
+                    'firma'  => $bank->customer?->name ?? '-',
+                    'banka'  => $bank->bank_name,
+                    'yil'    => $bank->request?->year ?? '-',
+                ];
+            } catch (\Throwable $e) {
+                Log::error('Pazar hatırlatma maili gönderilemedi', [
+                    'bank_id' => $bank->id,
+                    'error'   => $e->getMessage(),
+                ]);
+                $failedItems[] = [
+                    'firma'  => $bank->customer?->name ?? '-',
+                    'banka'  => $bank->bank_name,
+                    'hata'   => $e->getMessage(),
+                ];
+            }
+        }
 
         if ($adminEmails->isNotEmpty()) {
             try {

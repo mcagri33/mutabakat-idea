@@ -223,16 +223,12 @@ class ReconciliationMailService
     /**
      * Hatırlatma maili gönder (Pazar otomatik gönderimleri için).
      * Kaşe bekleyen ve cevap gelen bankalara GÖNDERİLMEZ.
+     *
+     * @param ReconciliationBank $bank
+     * @param array<string>|null $overrideRecipients Test modunda banka yerine bu e-postalara gönderilir (örn. admin listesi)
      */
-    public function sendReminderMail(ReconciliationBank $bank): void
+    public function sendReminderMail(ReconciliationBank $bank, ?array $overrideRecipients = null): void
     {
-        $request  = $bank->request;
-        $customer = $bank->customer;
-
-        if (!$bank->officer_email) {
-            throw new \Exception("Banka yetkilisinin e-postası yok.");
-        }
-
         $bank->load(['request', 'customer']);
         $request  = $bank->request;
         $customer = $bank->customer;
@@ -241,7 +237,17 @@ class ReconciliationMailService
             throw new \Exception("Talep veya müşteri bilgisi bulunamadı.");
         }
 
+        $recipients = $overrideRecipients ?? [$bank->officer_email];
+        $recipients = array_filter($recipients);
+        if (empty($recipients)) {
+            throw new \Exception("Banka yetkilisinin e-postası yok.");
+        }
+
+        $isTest = $overrideRecipients !== null;
         $subject = "Hatırlatma: {$customer->name} - {$request->year} Yılı Banka Mutabakatı";
+        if ($isTest) {
+            $subject = '[TEST] ' . $subject;
+        }
 
         $bodyViewData = [
             'bank'     => $bank,
@@ -253,12 +259,12 @@ class ReconciliationMailService
             $pdfPath = $this->mutabakatService->generatePdf($request, $customer, $bank);
 
             $ccAddresses = ['mutabakat@ideadenetim.com.tr'];
-            if ($request->include_auto_cc ?? true) {
+            if (!$isTest && ($request->include_auto_cc ?? true)) {
                 if ($customer->email && !in_array($customer->email, $ccAddresses)) {
                     $ccAddresses[] = $customer->email;
                 }
             }
-            if ($request->cc_emails) {
+            if (!$isTest && $request->cc_emails) {
                 foreach (preg_split('/[,;\n\r]+/', $request->cc_emails) as $email) {
                     $email = trim($email);
                     if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL) && !in_array($email, $ccAddresses)) {
@@ -267,12 +273,13 @@ class ReconciliationMailService
                 }
             }
 
-            Mail::send('emails.bank-reconciliation-reminder', $bodyViewData, function ($message) use ($bank, $request, $subject, $pdfPath, $ccAddresses) {
+            Mail::send('emails.bank-reconciliation-reminder', $bodyViewData, function ($message) use ($recipients, $request, $subject, $pdfPath, $ccAddresses, $isTest) {
                 $message->from('mutabakat@mg.ideadocs.com.tr', 'Mutabakat Yönetim Sistemi');
-                $message->to($bank->officer_email)
-                    ->cc($ccAddresses)
-                    ->subject($subject)
-                    ->attach($pdfPath, ['as' => 'Banka-Mutabakat-Mektubu.pdf', 'mime' => 'application/pdf']);
+                $message->to($recipients)->subject($subject);
+                if (!$isTest) {
+                    $message->cc($ccAddresses);
+                }
+                $message->attach($pdfPath, ['as' => 'Banka-Mutabakat-Mektubu.pdf', 'mime' => 'application/pdf']);
 
                 // Talep ek dosyalarını da ekle (ilk maildeki gibi)
                 $request->refresh();
@@ -295,22 +302,24 @@ class ReconciliationMailService
                 }
             });
 
+            $sentTo = $overrideRecipients ? implode(', ', $recipients) : $bank->officer_email;
             ReconciliationEmail::create([
                 'request_id'  => $request->id,
                 'bank_id'     => $bank->id,
-                'sent_to'     => $bank->officer_email,
+                'sent_to'     => $sentTo,
                 'subject'     => $subject,
                 'body'        => view('emails.bank-reconciliation-reminder', $bodyViewData)->render(),
                 'status'      => 'sent',
                 'sent_at'     => now(),
             ]);
 
-            Log::info('Banka mutabakat hatırlatma maili gönderildi', ['bank_id' => $bank->id]);
+            Log::info('Banka mutabakat hatırlatma maili gönderildi', ['bank_id' => $bank->id, 'test' => $isTest]);
         } catch (\Exception $e) {
+            $sentTo = $overrideRecipients ? implode(', ', $recipients) : $bank->officer_email;
             ReconciliationEmail::create([
                 'request_id'     => $request->id,
                 'bank_id'        => $bank->id,
-                'sent_to'        => $bank->officer_email,
+                'sent_to'        => $sentTo,
                 'subject'        => $subject,
                 'body'           => null,
                 'status'         => 'failed',
