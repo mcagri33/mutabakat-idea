@@ -72,15 +72,11 @@ class BanksRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('officer_email')->label('Yetkili E-posta')->limit(30),
                 Tables\Columns\TextColumn::make('officer_phone')->label('Telefon')->limit(15),
 
-                Tables\Columns\IconColumn::make('kase_talep_edildi')
+                Tables\Columns\TextColumn::make('kase_talep_edildi')
                     ->label('Kaşe')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-document-check')
-                    ->trueColor('warning')
-                    ->falseIcon('heroicon-o-minus')
-                    ->falseColor('gray')
-                    ->tooltip(fn ($record) => $record->kase_talep_edildi ? 'Firmadan kaşe bekleniyor' : '-')
-                    ->alignCenter(),
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state ? 'Kaşe Bekleniyor' : '-')
+                    ->color(fn ($state) => $state ? 'warning' : 'gray'),
 
                 Tables\Columns\TextColumn::make('mail_status')
                     ->label('Mail Durumu')
@@ -225,6 +221,31 @@ class BanksRelationManager extends RelationManager
                 ->send();
         }),
 
+                Tables\Actions\Action::make('markKaseTalepEdildi')
+                    ->label('Kaşe Talep Edildi')
+                    ->icon('heroicon-o-document-check')
+                    ->color('warning')
+                    ->visible(fn ($record) => !$record->kase_talep_edildi)
+                    ->action(function ($record) {
+                        $record->update(['kase_talep_edildi' => true]);
+                        Notification::make()
+                            ->title('Kaşe talep edildi olarak işaretlendi')
+                            ->body($record->bank_name . ' – Bu bankaya otomatik hatırlatma maili gönderilmeyecek.')
+                            ->success()
+                            ->send();
+                    }),
+                Tables\Actions\Action::make('markKaseKaldir')
+                    ->label('Kaşe İşaretini Kaldır')
+                    ->icon('heroicon-o-minus-circle')
+                    ->color('gray')
+                    ->visible(fn ($record) => $record->kase_talep_edildi)
+                    ->action(function ($record) {
+                        $record->update(['kase_talep_edildi' => false]);
+                        Notification::make()
+                            ->title('Kaşe işareti kaldırıldı')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('markAsReceived')
                     ->label('Cevap Geldi Olarak İşaretle')
                     ->icon('heroicon-o-check-circle')
